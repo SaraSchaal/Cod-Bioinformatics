@@ -1,0 +1,196 @@
+#!/bin/bash
+
+usage="\
+Usage:
+  $(basename "$0") -P stacks_dir -B bam_file -O out_dir
+
+Extracts the coordinates of the RAD loci from the given BAM file into a
+'locus_coordinates.tsv' table, then rewrites the 'catalog.fa.gz' and
+'catalog.calls' files so that they include the genomic coordinates given in the
+input BAM file.
+"
+
+version="_VERSION_"
+
+# Check dependencies
+# ==========
+
+command -v python3 &>/dev/null  || { python3; echo "Error: Python 3 is required." >&2; exit 1; }
+command -v samtools &>/dev/null || { samtools; echo "Error: Samtools is required." >&2; exit 1; }
+
+# Parse arguments
+# ==========
+
+# If there aren't any arguments, print the help.
+[[ $# -gt 0 ]] || { echo -n "$usage"; exit 1; }
+
+# Check that there aren't weird characters in the input.
+for arg in "$@" ;do
+    if [[ "$arg" =~ [^[:alnum:]_.,/~+=:-] ]] ;then
+        echo "Error: illegal character in argument '$arg'." >&2
+        exit 1
+    fi
+done
+
+# Parse arguments.
+while getopts 'P:B:O:hv' opt ;do
+    case "$opt" in
+    P) stacks_d="${OPTARG/%\//}" ;;
+    B) bam_f="${OPTARG/%\//}" ;;
+    O) out_d="${OPTARG/%\//}" ;;
+    h) echo -n "$usage" >&2; exit 1 ;;
+    v) echo "$version" >&2; exit 1 ;;
+    *) echo "Error: Bad arguments (-h for help)." >&2; exit 1 ;;
+    esac
+done
+shift $((OPTIND-1))
+if [[ $# -ne 0 ]] ;then
+    echo "Error: '$1' is seen as a positional argument (expected no positional arguments)." >&2
+    exit 1
+fi
+
+# Check them.
+[[ "$stacks_d" ]] || { echo -n "Error: -P is required." >&2; exit 1; }
+[[ "$bam_f" ]]    || { echo -n "Error: -B is required." >&2; exit 1; }
+[[ "$out_d" ]]    || { echo -n "Error: -O is required." >&2; exit 1; }
+
+[[ -e "$stacks_d" ]] || { ls -- "$stacks_d"; exit 1; }
+[[ -e "$bam_f" ]]    || { ls -- "$bam_f"; exit 1; }
+
+fa="$stacks_d/catalog.fa.gz"
+vcf="$stacks_d/catalog.calls"
+[[ -e "$fa" ]]  || { ls -- "$fa"; exit 1; }
+[[ -e "$vcf" ]] || { ls -- "$vcf"; exit 1; }
+
+o_coords="$out_d/locus_coordinates.tsv"
+o_fa="$out_d/catalog.fa.gz"
+o_vcf="$out_d/catalog.calls"
+[[ ! -e "$o_coords" ]]  || { echo "Error: Refusing to overwrite '$o_coords'." >&2; exit 1; }
+[[ ! -e "$o_fa" ]]  || { echo "Error: Refusing to overwrite '$o_fa'." >&2; exit 1; }
+[[ ! -e "$o_vcf" ]] || { echo "Error: Refusing to overwrite '$o_vcf'." >&2; exit 1; }
+
+# If something goes wrong, stop & print an error.
+set -e -o pipefail
+trap "echo 'Error: aborted.' >&2" EXIT
+
+# Make sure we have write permissions.
+mkdir -p "$out_d"
+touch "$o_fa" "$o_vcf"
+
+# Retrieve the highest ID in the catalog.
+# ==========
+
+echo "Finding the highest current locus ID..."
+id=$(gzip -cd "$fa" | tail -n2 | head -n1 | awk '{print $1}')
+if [[ ! "$id" =~ ^\>[0-9]+$ ]] ;then
+    echo "Error: Unexpected format in '$fa'; the second to last line was:" >&2
+    gzip -cd "$fa" | tail -n2 | head -n1
+    exit 1
+fi
+id=$(echo "$id" | cut -c2-)
+echo "$id"
+echo
+
+# Write the old_id : new_id : pos file.
+# ==========
+
+echo "Extracting locus coordinates..."
+samtools view -F 0x904 "$bam_f" |
+    # Convert SAM to `LOCUS_ID \t CHR \t POS \t STRAND`.
+    awk -F '\t' -v OFS='\t' '{
+            if (int( $2 % (2*16) / 16 )) {
+                # Negative strand.
+                pos = $4 - 1
+                gsub(/[0-9]+[ISH]/, "", $6)
+                gsub(/[A-Z]/, ",", $6)
+                n = split(substr($6, 1, length($6)-1), cig, ",")
+                for (i=1; i<=n; ++i) { pos += cig[i] }
+                print $1, $3, pos, "-"
+            } else {
+                print $1, $3, $4, "+"
+            }
+        }' |
+    # Sort by chromosome.
+    sort -k2,2 |
+    # Pull the reference chromosome order from the BAM header.
+    join -t $'\t' -12 -22 -o "1.1 1.2 2.1 1.3 1.4" \
+        - \
+        <(samtools view -H "$bam_f" |
+            grep '^@SQ' | grep -oE 'SN:[^\t]+' | cut -c4- |
+            awk '{printf NR"\t"$1"\n"}' |
+            sort -k2,2
+        ) |
+    # Sort by chromosome index, bp & strand, then remove the index.
+    sort -k3,3n -k4,4n -k5,5r | cut -f 1,2,4,5 |
+    # Create the new IDs (we start at the power of 10 above the current max).
+    awk 'BEGIN{id = '"$id"' + 1} {printf id++ "\t" $1 "\t" $2 ":" $3 ":" $4 "\n"}' |
+    # Add a header.
+    { echo -e 'id_new\tid_old\taln_pos'; cat; } \
+    > "$o_coords"
+
+[[ $(wc -l < "$o_coords") -gt 1 ]] || { echo "Error: Extraction of coordinates failed; check BAM file." >&2; exit 1; }
+echo "Wrote '$o_coords'."
+echo
+
+# Write the new FASTA file.
+# ==========
+
+echo "Rewriting locus sequences and information..."
+gzip -cd "$fa" |
+    tr -d '\r' | paste -d '\r' - - | sed 's/^>//' |
+    awk -F' ' -v OFS=' ' '
+        BEGIN{
+            while(getline < "'"$o_coords"'") {
+                if (! /^id_new/) {
+                    old2new[$2] = $1
+                    old2pos[$2] = $3
+                }
+            }
+        } {
+            old_id = $1
+            if (old_id in old2new) {
+                $1 = old2new[old_id] " pos=" old2pos[old_id]
+                print
+            }
+        }' |
+    sort -k1,1n |
+    sed 's/^/>/' | tr '\r' '\n' |
+    gzip \
+    > "$o_fa"
+
+echo "Wrote '$o_fa'."
+echo
+
+# Write the new VCF file.
+# ==========
+
+echo "Rewriting variants..."
+{
+# Copy the header.
+{ gzip -cd "$vcf" 2>/dev/null || true; } | sed '/^#CHROM/ q' # (gzip unhappy about the closed pipe).
+
+# Update & resort the records.
+gzip -cd "$vcf" | grep -v '^#' |
+    awk -F'\t' -v OFS='\t' '
+        BEGIN{
+            while(getline < "'"$o_coords"'") {
+                if (! /^id_new/) {
+                    old2new[$2] = $1
+                }
+            }
+        } {
+            old_id = $1
+            if (old_id in old2new) {
+                $1 = old2new[old_id]
+                print
+            }
+       }' |
+    sort -k1,1n -k2,2n
+} | gzip \
+> "$o_vcf"
+
+echo "Wrote '$o_vcf'."
+echo
+
+trap - EXIT
+echo "$(basename "$0") is done."

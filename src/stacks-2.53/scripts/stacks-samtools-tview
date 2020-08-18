@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+stacks_version="_VERSION_"
+help="\
+usage:
+  stacks-samtools-tview -P gstacks_dir -c catalog_locus_id -s sample_name
+
+Displays the read alignments of the given sample for the given locus, in text
+format, to the standard output. Requires gstacks to have been run with the
+--write-alignments option. (This is a convenience wrapper around samtools-tview.)
+"
+
+set -e -o pipefail
+trap 'echo "ERROR: at line $LINENO: command failed (this should not happen; v$stacks_version)."' ERR
+
+# Check that we have samtools
+# ==========
+if ! command -v samtools >/dev/null ;then
+    samtools
+    echo "ERROR: samtools not installed/not found in \$PATH." >&2
+    exit 1
+fi
+
+# Parse arguments
+# ==========
+dir=
+locus=
+sample=
+if (( $# == 0 )) ;then
+    echo -n "$help"
+    exit 1
+fi
+while getopts 'vhP:c:s:' op ;do
+    case $op in
+    P) dir="$OPTARG" ;;
+    c) locus="$OPTARG" ;;
+    s) sample="$OPTARG" ;;
+    h) echo -n "$help"; exit 1 ;;
+    v) echo "$stacks_version"; exit 1 ;;
+    *) echo "ERROR: while parsing arguments." >&2; exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+if (( $# > 0 )) ;then
+    echo "ERROR: Found positional arguments ('$*'), when none were expected." >&2
+    exit 1
+fi
+if [[ ! "$dir" ]] ;then
+    echo "ERROR: -P is required." >&2
+    exit 1
+elif [[ ! -d "$dir" ]] ;then
+    ls -L "$dir" ||:
+    echo "ERROR: '$dir' does not exist or is not a directory."
+    exit 1
+else
+    dir="${dir%/}"
+fi
+if [[ ! "$locus" ]] ;then
+    echo "ERROR: -c is required." >&2
+    exit 1
+elif [[ ! "$locus" =~ ^[0-9]+$ ]] ;then
+    echo "ERROR: '$locus' is not a legal locus ID (expected a number)." >&2
+    exit 1
+fi
+if [[ ! "$sample" ]] ;then
+    echo "ERROR: -s is required." >&2
+    exit 1
+fi
+
+# Check that files exists
+# ==========
+fa="$dir/catalog.fa.gz"
+if [[ ! -e "$fa" ]] ;then
+    ls -L "$fa" ||:
+    echo "ERROR: '$fa' does not exist." >&2
+    exit 1
+fi
+bam="$dir/$sample.alns.bam"
+if [[ ! -e "$bam" ]] ;then
+    ls -L "$bam" ||:
+    if ! find "$dir" -depth 1 -name '*.alns.bam' | grep -q . ;then
+        echo "ERROR: No '*.alns.bam' files seem to exist, did you run gstacks with --write-alignments?" >&2
+    fi
+    if grep -qs 'Input mode: reference-based' "$dir/gstacks.log" ;then
+        echo "ERROR: This looks like a reference-based run."
+    else
+        echo "ERROR: No alignments file found for sample '$sample'." >&2
+    fi
+    exit 1
+fi
+
+# Find the locus length
+# ==========
+if ! zgrep -qs ">$locus " "$fa" ;then
+    echo "ERROR: locus '$locus' doesn't exist in the catalog." >&2
+    exit 1
+fi
+
+# Index files
+# ==========
+if [[ ! -e "$fa" ]] || [[ "$fa" -nt "$fa.fai" ]] ;then
+    samtools faidx "$fa" || exit
+    ls -L "$fa.fai" >/dev/null
+fi
+if [[ ! -e "$bam.bai" ]] || [[ "$bam" -nt "$bam.bai" ]] ;then
+    samtools index "$bam" || exit
+    ls -L "$bam.bai" >/dev/null
+fi
+
+# Samtools tview
+# ==========
+cols=$(COLUMNS=10000 samtools tview -d t -p "$locus" "$bam" "$fa" |
+    awk 'NR>1 {sub(/[N ]+$/, ""); print length($0)}' | sort -rn | head -n1)
+COLUMNS="$cols" samtools tview -d t -p "$locus" "$bam" "$fa"

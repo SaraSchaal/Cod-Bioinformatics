@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+usage="\
+Usage:
+  $(basename "$0") DIST_FILE
+  $(basename "$0") DIST_FILE SECTION_NAME
+
+(1) Prints available sections/distributions for DIST_FILE.
+(2) Extracts section SECTION_NAME from DIST_FILE.
+"
+
+if { [[ $# -ne 1 ]] && [[ $# -ne 2 ]]; } || [[ "$1" =~ ^(-h|--help|--version)$ ]] ;then
+    echo -n "$usage" >&2
+    exit 1
+fi
+
+dist_f="$1"
+[[ -e "$dist_f" ]] || { ls -- "$dist_f"; exit 1; }
+
+if [[ "$2" ]] ;then
+    section="$(echo "$2" | grep -oE '\w+' | tr -d '\n')"
+    if ! grep --quiet "^BEGIN $section\\b" "$dist_f" ;then
+        echo "Error: Couldn't find section '$section' in '$dist_f'." >&1
+        exit 1
+    fi
+    sed -nE "/^END $section($| )/ q; /^BEGIN $section($| )/,$ p" "$dist_f" | sed 1d
+else
+    grep ^BEGIN "$dist_f" | cut -c7-
+fi

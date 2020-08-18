@@ -1,0 +1,39 @@
+Read1 before filtering:
+total reads: 2
+total bases: 288
+Q20 bases: 284(98.6111%)
+Q30 bases: 269(93.4028%)
+
+Read2 before filtering:
+total reads: 2
+total bases: 288
+Q20 bases: 273(94.7917%)
+Q30 bases: 255(88.5417%)
+
+Read1 after filtering:
+total reads: 2
+total bases: 278
+Q20 bases: 276(99.2806%)
+Q30 bases: 261(93.8849%)
+
+Read2 after filtering:
+total reads: 2
+total bases: 278
+Q20 bases: 265(95.3237%)
+Q30 bases: 247(88.8489%)
+
+Filtering result:
+reads passed filter: 4
+reads failed due to low quality: 0
+reads failed due to too many N: 0
+reads failed due to too short: 0
+
+Duplication rate: 0%
+
+Insert size peak (evaluated by paired-end reads): 77
+
+JSON report: Pop3_18304.1.json
+HTML report: Pop3_18304.1.html
+
+fastp --in1 Stacks_Out/Pop3_18304.1.fq.gz --in2 Stacks_Out/Pop3_18304.2.fq.gz --out1 FastP_Out/Pop3_18304.1.R1.fq.gz --out2 FastP_Out/Pop3_18304.1.R2.fq.gz -q 15 -u 50 --trim_front1 1 --cut_front --cut_tail --cut_window_size 5 --cut_mean_quality 15 --disable_adapter_trimming -j Pop3_18304.1.json -h Pop3_18304.1.html 
+fastp v0.21.0, time used: 0 seconds

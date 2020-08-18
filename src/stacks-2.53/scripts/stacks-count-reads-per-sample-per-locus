@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -e -o pipefail
+
+out_path=reads_per_sample_per_locus.tsv
+usage="\
+usage: $(basename ${BASH_SOURCE[0]}) STACKS_DENOVO_DIR
+
+Reads the 'matches.bam' files; outputs to '$out_path'.
+"
+
+if (( $# != 1 )) || [[ "$1" == -h ]] || [[ "$1" == --help ]] ;then
+    echo -n "$usage" >&2
+    exit 1
+fi
+cd "$1" || exit
+command -v samtools >/dev/null || { samtools; exit; }
+command -v Rscript >/dev/null || { Rscript; exit; }
+
+for f in *.matches.bam ;do
+    ls "$f" >/dev/null || exit
+    sample=${f%.matches.bam}
+    samtools view -f0x40 $f |
+        cut -f3 |
+        sed $'s/$/\t'"$sample"'/'
+done | Rscript -e "\
+    t = table(read.table('stdin'));\
+    rownames(t) = paste0('c',rownames(t));\
+    write.table(t,sep='\t',quote=F,file='$out_path')"

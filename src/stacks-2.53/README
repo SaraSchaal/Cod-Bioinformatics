@@ -1,0 +1,43 @@
+The Stacks Pipeline
+-------------------
+
+0. Prerequisites
+
+Stacks should build on any standard UNIX-like environment (Apple OS X, Linux, 
+etc.) Stacks is an independent pipeline and can be run without any additional
+external software. 
+
+If compiling with the standard GCC compiler, Stacks needs a version of the compiler
+newer than GCC 4.9.0.
+
+1. Build the software. Stacks uses the standard autotools install:
+
+% tar xfvz stacks-x.xx.tar.gz
+% cd stacks-x.xx
+% ./configure
+
+You can change the root of the install location (/usr/local/ on most
+operating systems) by specifying the --prefix command line option to
+the configure script.
+
+% ./configure --prefix=/home/smith/local
+
+You can enable Sparsehash by adding the following options:
+
+% ./configure --enable-sparsehash
+
+% make
+
+You can speed up the build if you have more than one processor:
+
+% make -j 8
+
+3. Install the software.
+
+% sudo make install
+
+A default Stacks install will install files in the following way:
+
+/usr/local/bin - stacks executables and perl scripts
+
+The pipeline is now ready to run. 

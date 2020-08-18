@@ -1,0 +1,51 @@
+#!/bin/bash
+
+
+gdb_req="\
+This utility requires GDB, the GNU Debugger, to be installed on the system where
+Stacks is run. You can check whether this is the case by just typing:
+
+  gdb --version
+
+at the command prompt. Note that you may need to load the corresponding module.
+GDB is standard scientific software, but may not be installed on some systems.
+For further information please contact the administrators of your system;
+trying to install GDB without administrator priviledges is not recommended.
+
+For questions please contact us, e.g. at stacks-users@googlegroups.com
+"
+
+usage="\
+Usage:
+  $(basename $0) PROGRAM ARGUMENTS
+
+e.g.
+  $(basename $0) populations -P . -p 3 -r 0.5 --vcf
+
+This utility will run the \`PROGRAM ARGUMENTS\` command as specified, but in
+case of a crash it will print additional information, helping us in fixing the
+crash.
+"
+
+if [[ $# -eq 0 ]] ;then
+    echo -n "$usage" >&2
+    echo
+    echo -n "$gdb_req"
+    exit 1
+fi
+
+if ! command -v gdb &>/dev/null ;then
+    gdb
+    echo "Error: GDB is not installed (or loaded)." >&2
+    echo
+    echo -n "$gdb_req"
+    exit 1
+fi
+
+exec &> >(tee stacks-gdb.log)
+
+gdb --quiet --args "$@" <<EOF
+    catch throw
+    run
+    backtrace full
+EOF

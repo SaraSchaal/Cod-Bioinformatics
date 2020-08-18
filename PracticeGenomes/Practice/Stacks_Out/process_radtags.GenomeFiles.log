@@ -1,0 +1,16 @@
+process_radtags v2.53, executed 2020-05-19 19:48:13 (zlib-1.2.11)
+process_radtags -P -p Practice/GenomeFiles/ -o Practice/Stacks_Out/ -b Practice/barcodeFilei52_i79.txt --inline_inline --disable_rad_check
+File	Retained Reads	Low Quality	Barcode Not Found	RAD cutsite Not Found	Total
+i5-2-i7-9_head_R1_001.fastq	4	0	0	0	4
+
+Total Sequences	4
+Barcode Not Found	0
+Low Quality	0
+RAD Cutsite Not Found	0
+Retained Reads	4
+
+Barcode	Filename	Total	NoRadTag	LowQuality	Retained
+ACTTGA-ACTTGA	Pop3_18304	4	0	0	4
+
+Sequences not recorded
+Barcode	Total

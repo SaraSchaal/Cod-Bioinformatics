@@ -1,0 +1,59 @@
+#!/usr/bin/env Rscript
+
+usage = "\
+usage: stacks-hist2d-loci-samples-coverage reads_per_sample_per_locus.tsv
+
+Input is a table of read counts per sample (columns) per locus (row)
+e.g. the output of stacks-count-reads-per-sample-per-locus.
+"
+args = commandArgs(trailingOnly = TRUE)
+if (length(args) != 1) {
+    stop(usage)
+}
+covs_path = args[1]
+pdf_path = paste0(covs_path, '.pdf')
+
+d = read.table(covs_path) # Where columns=samples, rows=loci
+n_samples = ncol(d)
+
+y.logbase = 10
+y.max = log(100e3, base=y.logbase)
+y.binwidth = n_samples / y.max
+z.logbase = 10^0.25
+
+dd = data.frame(
+    ns = rowSums(d>0),
+    logmeancovs = log(rowSums(d) / rowSums(d>0), base=y.logbase))
+dd$logmeancovs = round(dd$logmeancovs * y.binwidth) / y.binwidth
+
+z = table(dd)
+z = log(z, base=z.logbase)
+x = as.numeric(rownames(z))
+y = as.numeric(colnames(z))
+z.breaks = 0:ceiling(max(z))
+
+rcolorbrewer_spectral12 = c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#FFFFBF", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2")
+col_ramp = colorRampPalette(rev(rcolorbrewer_spectral12))
+col = col_ramp(length(z.breaks)-1)
+
+pdf(pdf_path)
+image(
+    x, y, z,
+    main=basename(covs_path),
+    xlab='Num. Samples', ylab='Mean Coverage',
+    xlim=c(1-0.5, n_samples+0.5), ylim=c(0,y.max),
+    xaxt='n', yaxt='n', breaks=z.breaks, col=col)
+x.labels = ceiling(seq(1, n_samples, length.out=5))
+axis(1, at=1:n_samples, labels=F)
+axis(1, at=x.labels, labels=x.labels, lwd=NA, lwd.ticks=2)
+axis(2, at=log(10^(0:10), base=y.logbase), labels=10^(0:10))
+abline(v=x.labels, col='#00000011')
+abline(h=log(10^(0:20/2), base=y.logbase), col='#00000011')
+# legend
+par(mar=rep(0,4))
+plot.new()
+legend('center',
+    title='Num. Loci',
+    legend=rev(head(round(z.logbase^z.breaks),-1)),
+    fill=rev(col))
+.=dev.off()

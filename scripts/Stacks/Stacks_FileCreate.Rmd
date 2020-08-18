@@ -1,0 +1,94 @@
+---
+title: "Demultiplexing"
+author: "Sara Michele Schaal"
+date: "5/20/2020"
+output: html_document
+---
+### Stacks 
+
+## Add stack output file names to summary file
+```{r}
+df.samples <- read.csv("src/Stacks/SequencePlateOrder_updates.csv")
+head(df.samples)
+str(df.samples)
+
+df.popIDs <- read.csv("src/Stacks/Population_IDs.csv")
+df.popIDs
+
+year00 <- substr(df.samples$SampleID, start= 1, stop= 2)
+sample000 <- substr(df.samples$SampleID, start = 4, stop = 6)
+
+df.samples$Sample5digit <- paste(year00, sample000, sep = "")
+
+for(i in 1:nrow(df.popIDs)){
+  for(j in 1:nrow(df.samples)){
+    if(df.popIDs$PopLoc[i] == df.samples$Population[j]){
+     df.samples$file_name_R1[j] <- paste(df.popIDs$PopID[i], "_", df.samples$Sample5digit[j], ".1.fq.gz", sep = "")
+     df.samples$file_name_R2[j] <- paste(df.popIDs$PopID[i], "_", df.samples$Sample5digit[j], ".2.fq.gz", sep = "")
+     df.samples$file_name_R1rem[j] <- paste(df.popIDs$PopID[i], "_", df.samples$Sample5digit[j], ".rem.1.fq.gz", sep = "")
+     df.samples$file_name_R2rem[j] <- paste(df.popIDs$PopID[i], "_", df.samples$Sample5digit[j], ".rem.2.fq.gz", sep = "")
+     df.samples$PopID[j] <- paste(df.popIDs$PopID[i])
+    }
+  }
+}
+
+df.samples$NewSampleID<- paste(df.samples$PopID, "_", df.samples$Sample5digit, sep = "")
+#write.csv(df.samples, "src/SequencePlateOrder_20200618.csv")
+
+## Remove samples that we aren't using due to library prep mistake
+write.table(df.samples[df.samples$SampleID != "18_102_Gm" & 
+                       df.samples$SampleID != "18_016_Gm" &
+                       df.samples$SampleID != "16_237_Gm" &
+                       df.samples$SampleID != "16_230_Gm", ncol(df.samples)], 
+            "src/SampleNames.txt", row.names = FALSE, col.names = FALSE)
+
+```
+
+
+## Create stacks barcode files
+```{r}
+#install.packages("stringr")
+library(stringr)
+primer_combos <- unique(paste(df.samples$i5.Primer, df.samples$i7.Primer, sep = ""))
+
+adapterSeq <- read.csv("src/Stacks/Barcode_Sequences.csv", header = FALSE)
+colnames(adapterSeq) <- c("AdaptNum", "AdaptSeq")
+  
+for(i in 1:length(primer_combos)){
+  prim.combo.adapters <- NULL
+  population.id <- NULL
+  ind.id <- NULL
+  adapter.num <- NULL
+  if(str_count(primer_combos[i]) == 2){
+    file.name <- paste("barcodeFilei5", substr(primer_combos[i], start = 1, stop = 1), "_i7", 
+                       substr(primer_combos[i], start = 2, stop = 2), ".txt", sep = "")
+  } else {
+    file.name <- paste("barcodeFilei5", substr(primer_combos[i], start = 1, stop = 1), "_i7", 
+                       substr(primer_combos[i], start = 2, stop = 3), ".txt", sep = "")
+  }
+  for(j in 1:nrow(df.samples)){
+    if(paste(df.samples$i5.Primer[j], df.samples$i7.Primer[j], sep = "") == primer_combos[i]){
+      prim.combo.adapters <- c(prim.combo.adapters, paste(df.samples$adapter.sequence[j]))
+      population.id <- c(population.id, paste(df.samples$PopID[j]))
+      ind.id <- c(ind.id, paste(df.samples$Sample5digit[j]))
+      adapter.num <- c(adapter.num, df.samples$Adapter[j])
+    }
+  }
+  barcodetable <- data.frame(prim.combo.adapters, prim.combo.adapters, 
+                             paste(population.id, "_", ind.id, sep = ""))
+  colnames(barcodetable) <- NULL
+  rownames(barcodetable) <- NULL
+  write.table(barcodetable, file = paste("src/Stacks/BarcodeFiles/", file.name, sep = ""), 
+              sep = "\t", col.names = FALSE, 
+              row.names = FALSE, quote = FALSE)
+ }
+
+```
+
+```{r}
+
+head(df.samples)
+
+
+
+```
