@@ -1,0 +1,27 @@
+## Using BWA
+This is used for aligning reads to a reference genome
+
+## Data availability section from second cod genome assembly (Tørresen et al. 2017)
+Accession numbers at ENA (http://www.ebi.ac.uk/ena) for the gadMor2 assembly: WGS: CAEA020000001-CAEA020024862. Scaffolds: LN836027-LN845721. Chromosomes: LN845748-LN845770. Accession numbers for the Illumina libraries used for genome assembly: ERX1622640-ERX1622647. Accession numbers for the 454 libraries used for genome assembly: ERX1761596-ERX1761760. Accession numbers for the PacBio libraries used for genome assembly: ERX1787826-ERX1787972. Accession number for the PacBio Iso-Seq used for genome annotation: PRJEB18628. The four original assemblies and gadMor2 available at Figshare: doi.org/10.6084/m9.figshare.3408247. All scripts used for analysis are available at https://github.com/uio-cels/cod2_scriptsand https://github.com/uio-cels/Repeats.
+
+  
+  bwa mem ref.fa read1.fq read2.fq > aln-pe.sam
+
+
+The major hurtle is getting my merged reads to be combined with my unmerged reads. Jon has code in dDocent for this but I have struggled to understand how it works.
+
+## Arguments
+
+	-t number of threads .. we can parallalize this process should we do this? 
+
+	-L ? clipping penalty not really sure how this works
+
+	-a output all found alignments for SE or unpaired paired end; flagged as secondary alignments
+
+	-A matching score
+
+	-B mismatch penalty
+
+	-O gap penalty
+
+	
