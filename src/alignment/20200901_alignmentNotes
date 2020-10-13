@@ -10,6 +10,13 @@ Accession numbers at ENA (http://www.ebi.ac.uk/ena) for the gadMor2 assembly: WG
 
 The major hurtle is getting my merged reads to be combined with my unmerged reads. Jon has code in dDocent for this but I have struggled to understand how it works.
 
+UPDATE: Based on conversation with Jon, we do not need to merge reads when using whole-genome data. We actually lose a significant amount of data from doing this. 
+
+Notes from 20201006 Meeting with Jon
+	Less than 6 hours per sample 
+	New version of BWA - BWA-mem2
+	Total size of your reads x 4 
+
 ## Arguments
 
 	-t number of threads .. we can parallalize this process should we do this? 
