@@ -1,4 +1,7 @@
 ## 20201007 Comparison of a genome file pre and post running of Stacks
+The adapter is ACTTGA and is found at the start of each read before stacks is run (Pre Stacks). Then in the Post stacks files it is no longer there.  
+This is the main reasion we added the --disable_adapter_trimming from FastP, but I am running a test to compare what the files look like with and without
+that flag added.  
 
 ## Pre Stacks
 # Read 1 - Before Stacks
