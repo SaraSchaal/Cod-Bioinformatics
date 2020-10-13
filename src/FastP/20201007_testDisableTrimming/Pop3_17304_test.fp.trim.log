@@ -1,0 +1,41 @@
+Read1 before filtering:
+total reads: 51468725
+total bases: 7411496400
+Q20 bases: 7154415158(96.5313%)
+Q30 bases: 6865599243(92.6345%)
+
+Read2 before filtering:
+total reads: 51468725
+total bases: 7411496400
+Q20 bases: 7075635879(95.4684%)
+Q30 bases: 6751799455(91.099%)
+
+Read1 after filtering:
+total reads: 50989993
+total bases: 5785157582
+Q20 bases: 5653155766(97.7183%)
+Q30 bases: 5463699334(94.4434%)
+
+Read2 aftering filtering:
+total reads: 50989993
+total bases: 5784560802
+Q20 bases: 5630433908(97.3355%)
+Q30 bases: 5420793760(93.7114%)
+
+Filtering result:
+reads passed filter: 101979986
+reads failed due to low quality: 949524
+reads failed due to too many N: 7320
+reads failed due to too short: 620
+reads with adapter trimmed: 55240378
+bases trimmed due to adapters: 2586058119
+
+Duplication rate: 1.76185%
+
+Insert size peak (evaluated by paired-end reads): 92
+
+JSON report: FastP_Out/jobSum/Pop3_17304_test.fp.json
+HTML report: FastP_Out/jobSum/Pop3_17304_test.fp.html
+
+fastp --in1 Stacks_Out/Pop3_17304.1.fq.gz --in2 Stacks_Out/Pop3_17304.2.fq.gz --out1 FastP_Out/Pop3_17304_test.R1.fq.gz --out2 FastP_Out/Pop3_17304_test.R2.fq.gz -q 15 -u 50 --trim_front1 1 --cut_front --cut_tail --cut_window_size 5 --cut_mean_quality 15 -j FastP_Out/jobSum/Pop3_17304_test.fp.json -h FastP_Out/jobSum/Pop3_17304_test.fp.html 
+fastp v0.20.1, time used: 1282 seconds
