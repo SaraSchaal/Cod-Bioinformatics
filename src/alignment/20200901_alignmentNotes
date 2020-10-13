@@ -21,14 +21,20 @@ Notes from 20201006 Meeting with Jon
 
 	-t number of threads .. we can parallalize this process should we do this? 
 
-	-L ? clipping penalty not really sure how this works
+	-L ? clipping penalty (DON'T NEED?)
+
+	-A ? matching score
+
+	-B ? mismatch penalty
+
+	-O ? gap penalty
 
 	-a output all found alignments for SE or unpaired paired end; flagged as secondary alignments
 
-	-A matching score
+	-M mark shorter split hits as secondary
 
-	-B mismatch penalty
+	-T Don't output alignment with score lower than 10 (DON"T NEED?)
 
-	-O gap penalty
+	-R RGline (reference)
 
 	
