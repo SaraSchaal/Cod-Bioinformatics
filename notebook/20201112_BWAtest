@@ -1,0 +1,157 @@
+20201112 - test different parameters for BWA
+
+## The first thing you need to do for BWA to work is index your genome. 
+Download your genome from NCBI and run the following line
+
+## Test three samples using BWA parameters suggested by Jon P compared to the default
+Pop1_16216
+Pop5_17273
+Pop7_18156
+
+---> example script for running on cluster with *Jon P parameter suggestions*
+
+	#!/bin/bash
+	#SBATCH --job-name=Pop1_16216_submitBWA.txt
+	#SBATCH --mem=10Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=4:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=BWA_Out/clustOut/Pop1_16216.%j.out
+	#SBATCH --error=BWA_Out/clustOut/Pop1_16216.%j.err
+	module load lotterhos/2020-08-24
+	source activate lotterhos-py38
+	bwa mem BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna FastP_Out/Pop1_16216.R1.fq.gz FastP_Out/Pop1_16216.R2.fq.gz  > BWA_Out/Pop1_16216aln.sam -O 5 -B 3
+
+---> example script for running on cluster with *default* parameters
+
+	#!/bin/bash
+	#SBATCH --job-name=Pop1_16216_submitBWA.txt
+	#SBATCH --mem=10Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=4:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=BWA_Out/clustOut/Pop1_16216.%j.out
+	#SBATCH --error=BWA_Out/clustOut/Pop1_16216.%j.err
+	module load lotterhos/2020-08-24
+	source activate lotterhos-py38
+	bwa mem BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna FastP_Out/Pop1_16216.R1.fq.gz FastP_Out/Pop1_16216.R2.fq.gz  > BWA_Out/Pop1_16216alndef.sam 
+
+
+## check quality of alignment with samtools
+	#!/bin/bash
+	#SBATCH --job-name=Pop7_18156_alnCheckDef.txt
+	#SBATCH --mem=2Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=4:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=clustOut/Pop7_18156_def.%j.out
+	#SBATCH --error=clustOut/Pop7_18156_def.%j.err
+	module load samtools/1.9
+	samtools view -Sbt ../BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna ../BWA_Out/Pop7_18156alnDef.sam | samtools flagstat -
+
+
+
+# Pop1_16216 -- default
+75884689 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+1288099 + 0 supplementary
+0 + 0 duplicates
+74533868 + 0 mapped (98.22% : N/A)
+74596590 + 0 paired in sequencing
+37298295 + 0 read1
+37298295 + 0 read2
+70771158 + 0 properly paired (94.87% : N/A)
+73118068 + 0 with itself and mate mapped
+127701 + 0 singletons (0.17% : N/A)
+2115674 + 0 with mate mapped to a different chr
+774013 + 0 with mate mapped to a different chr (mapQ>=5)
+
+# Pop1_16216 -- JP suggestions
+75779849 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+1183259 + 0 supplementary
+0 + 0 duplicates
+74456805 + 0 mapped (98.25% : N/A)
+74596590 + 0 paired in sequencing
+37298295 + 0 read1
+37298295 + 0 read2
+70915282 + 0 properly paired (95.07% : N/A)
+73157116 + 0 with itself and mate mapped
+116430 + 0 singletons (0.16% : N/A)
+2026064 + 0 with mate mapped to a different chr
+739870 + 0 with mate mapped to a different chr (mapQ>=5)
+
+# Pop5_17273 -- Defult
+58903136 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+930264 + 0 supplementary
+0 + 0 duplicates
+57830833 + 0 mapped (98.18% : N/A)
+57972872 + 0 paired in sequencing
+28986436 + 0 read1
+28986436 + 0 read2
+54564944 + 0 properly paired (94.12% : N/A)
+56736344 + 0 with itself and mate mapped
+164225 + 0 singletons (0.28% : N/A)
+1888188 + 0 with mate mapped to a different chr
+721497 + 0 with mate mapped to a different chr (mapQ>=5)
+
+# Pop5_17273 -- JP suggestions
+58831017 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+858145 + 0 supplementary
+0 + 0 duplicates
+57789661 + 0 mapped (98.23% : N/A)
+57972872 + 0 paired in sequencing
+28986436 + 0 read1
+28986436 + 0 read2
+54709842 + 0 properly paired (94.37% : N/A)
+56779900 + 0 with itself and mate mapped
+151616 + 0 singletons (0.26% : N/A)
+1806914 + 0 with mate mapped to a different chr
+682596 + 0 with mate mapped to a different chr (mapQ>=5)
+
+# Pop7_18156 -- Default
+88146425 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+1930769 + 0 supplementary
+0 + 0 duplicates
+86268875 + 0 mapped (97.87% : N/A)
+86215656 + 0 paired in sequencing
+43107828 + 0 read1
+43107828 + 0 read2
+80597658 + 0 properly paired (93.48% : N/A)
+84047370 + 0 with itself and mate mapped
+290736 + 0 singletons (0.34% : N/A)
+3031160 + 0 with mate mapped to a different chr
+1560596 + 0 with mate mapped to a different chr (mapQ>=5)
+
+# Pop7_18156 -- JP suggestions
+88014070 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+1798414 + 0 supplementary
+0 + 0 duplicates
+86188404 + 0 mapped (97.93% : N/A)
+86215656 + 0 paired in sequencing
+43107828 + 0 read1
+43107828 + 0 read2
+80846702 + 0 properly paired (93.77% : N/A)
+84119144 + 0 with itself and mate mapped
+270846 + 0 singletons (0.31% : N/A)
+2880598 + 0 with mate mapped to a different chr
+1486619 + 0 with mate mapped to a different chr (mapQ>=5)
+
+
+## Overall
+Jon's suggestions increased ~0.05% number of reads mapped
+Averaged ~98% reads mapped
+Averaged ~93.8% properly paired

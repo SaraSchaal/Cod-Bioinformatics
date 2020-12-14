@@ -39,3 +39,5 @@ done
 ### Order of files to run on cluster
 1) create submission files 
 2) loop through submission files and submit to cluster
+
+## 20201104 Reran FastP on all genomes to not include the disable adapter trimming flag based on Jon P advice

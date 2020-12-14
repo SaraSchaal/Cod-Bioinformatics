@@ -25,13 +25,13 @@ for(i in 1:nrow(sampleNames)){
                "source activate lotterhos-py38",
                paste0("fastp --in1 Stacks_Out/",sampleNames$ID[i],".1.fq.gz --in2 Stacks_Out/",sampleNames$ID[i],
                       ".2.fq.gz --out1 FastP_Out/",sampleNames$ID[i],".R1.fq.gz --out2 FastP_Out/",sampleNames$ID[i],
-                      ".R2.fq.gz -q 15 -u 50 --trim_front1 1 --cut_front --cut_tail --disable_adapter_trimming --cut_window_size 5 --cut_mean_quality 15 -j FastP_Out/jobSum/",
+                      ".R2.fq.gz -q 15 -u 50 --trim_front1 1 --cut_front --cut_tail --cut_window_size 5 --cut_mean_quality 15 -j FastP_Out/jobSum/",
                       sampleNames$ID[i],".fp.json -h FastP_Out/jobSum/",sampleNames$ID[i],
                       ".fp.html &> FastP_Out/jobSum/",sampleNames$ID[i],".fp.trim.log", sep = "")
                
   ), fileConn)
   
-  system(paste("sbatch submissionFiles/",filename))
+  ##system(paste("sbatch submissionFiles/",filename))
 }
 
 ## Bash For-loop 

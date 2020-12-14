@@ -125,12 +125,15 @@ process radtags will over write the last one.
 the 'bc' commmand takes the previous command and uses the bash calculator 
 
 echo $(cat Pop2_17011.1.fq.gz|wc -l)/4|bc 
-cat i58_i711rerun/Pop2_17011a.1.fq.gz i59_i76rerun/Pop2_17011b.1.fq.gz > Pop2_17011.1.fq.gz
+cat Pop2_17011a.1.fq.gz Pop2_17011b.1.fq.gz > Pop2_17011.1.fq.gz
 cat i58_i711rerun/Pop2_17011a.rem.1.fq.gz i59_i76rerun/Pop2_17011b.rem.1.fq.gz > Pop2_17011.rem.1.fq.gz
-cat i58_i711rerun/Pop2_17011a.2.fq.gz i59_i76rerun/Pop2_17011b.2.fq.gz > Pop2_17011.2.fq.gz
+cat Pop2_17011a.2.fq.gz Pop2_17011b.2.fq.gz > Pop2_17011.2.fq.gz
 cat i58_i711rerun/Pop2_17011a.rem.2.fq.gz i59_i76rerun/Pop2_17011b.rem.2.fq.gz > Pop2_17011.rem.2.fq.gz
 
-
+1a - 1481406
+1b - 742691
+2a - 1584435
+2b - 786731
 ## Read 1 Post Stacks
 
 [schaal.s@login-00 Stacks_Out]$ zcat Pop3_17304.1.fq.gz | head -n 10
