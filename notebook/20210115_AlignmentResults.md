@@ -67,4 +67,4 @@ Questions:
 What coverage do I use since we tried to have an insert size of 300 for sequencing so coverage of the genome may not be the divided by two number? 
 Also how should we interpret the results of the alignment with the paiired in sequencing vs. properly paired?
 
-![Alignment Results](../figures/AlignmentResults.pdf)
+![Alignment Results](../Figures/AlignmentResults.pdf)
