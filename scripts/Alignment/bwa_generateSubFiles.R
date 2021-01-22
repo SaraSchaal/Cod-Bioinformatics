@@ -19,14 +19,14 @@ for(i in 1:nrow(sampleNames)){
                "#SBATCH --time=15:00:00",
                "#SBATCH --nodes=1",
                "#SBATCH --tasks-per-node=1",
-               paste0("#SBATCH --output=BWA_out/clustOut/",sampleNames$ID[i],".%j.out"),
-               paste0("#SBATCH --error=BWA_out/clustOut/",sampleNames$ID[i],".%j.err"),
+               paste0("#SBATCH --output=BWA_Out/clustOut/",sampleNames$ID[i],".%j.out"),
+               paste0("#SBATCH --error=BWA_Out/clustOut/",sampleNames$ID[i],".%j.err"),
                "module load lotterhos/2020-08-24",
                "source activate lotterhos-py38",
-               paste0("bwa mem BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna FastP_Out/",
+               paste0("bwa mem -O 5 -B 3 -a -M BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna FastP_Out/",
                       sampleNames$ID[i],".R1.fq.gz FastP_Out/",sampleNames$ID[i],
                       ".R2.fq.gz  > BWA_Out/",sampleNames$ID[i],
-                      "aln.sam -O 5 -B 3",
+                      "aln.sam",
                       sep = "")
                
   ), fileConn)
