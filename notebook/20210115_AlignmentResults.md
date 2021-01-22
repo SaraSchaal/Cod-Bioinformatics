@@ -1,4 +1,4 @@
-### Analyzing alignment coverage
+# Analyzing alignment coverage
 
 My initial evaluation of coverage was confusing because the numbers were so high.
 
@@ -13,7 +13,7 @@ Total sequences: 2 * 144631311 = 289262622
 Yield (Mb): 43388 (= 144631311 * 300/10^6)
 Average coverage: 70.78/4 = 17.7X
 
-# Stacks results 
+### Stacks results 
 
 Total Sequnces: 289262622
 
@@ -35,7 +35,7 @@ Pop5_17278 - 20979.04/613 = 34.22 / 2 = 17.11
 Pop1_17291 - 22559.43/613 = 36.80 / 2 = 18.40
 Pop4_17236 - 22302.35/613 = 36.38 / 2 = 18.39
 
-# FastP results
+### FastP results
 
 *Reads after filtering:*
 Pop6_18017 - 57449434
@@ -49,7 +49,7 @@ Pop5_17278 - 69115312 * 300/10^6 / 613 = 33.82 /2 = 16.91
 Pop1_17291 - 74298686 * 300/10^6 / 613 = 36.36 /2 = 18.18
 Pop4_17236 - 73432362 * 300/10^6 / 613 = 35.94 /2 = 17.97
 
-# BWA results 
+### BWA results 
 *Paired in Sequencing*
 matches post FastP match BWA results
 Pop6_18017 - 57449434
