@@ -31,4 +31,10 @@ Notes from 20201006 Meeting with Jon
 
 	-R RGline (reference)
 
-	
+
+From Jon P:
+
+Yes, so much exciting stuff going on!  Good to hear that you're making progress on the cod project.  I generally would calculate coverage using bedtools and then plot means across genomic intervals, like 1kb, 5kb, 10kb, and look at patterns along chromosomes.  I would then put this into a tidy format by genomic interval for plotting with ggplot.  
+
+Samtools also has some basic histogram features built in now too.  You can make really simple (but quick) plots in terminal https://www.htslib.org/doc/samtools-stats.html.  I have some super messy code that I can share if you need.
+
