@@ -8,6 +8,8 @@ Questions:
 5) Skip over regions with really high read depth with -g flag? 
 6) Run in parallel with freebayes-parallel?
 7) -@ --variant-input VCF Use variants reported in VCF file as input to the algorithm. A report will be generated for every record in the VCF file. Do we need this for potentially the PanI locus?
+8) -m min mapping or -q base quality mapping default is 30 and base default is 20
+9) -! min-coverage to process as a site
 
 Notes:
 
