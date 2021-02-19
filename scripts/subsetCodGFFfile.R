@@ -15,7 +15,8 @@ chr2.final.loc <- 28732775
 chr2.by10k <- seq(from = 0, to = 28732775, by = 10000)
 chr2.by10kb.start <- c(chr2.by10k, chr2.final.loc)
 chr2.by10kb.end <- chr2.by10kb+9999
-section.names <- paste0("NC_044049.1.sec", seq(from = 1, to = length(chr2.by10kb), by = 1))
+section.names <- paste0("NC_044049.1.sec", seq(from = 1, to = length(chr2.by10kb), 
+                                               by = 1))
 
 df.chr2.10kb <- as.matrix(cbind(section.names, chr2.by10kb.start, chr2.by10kb.end))
 write.table(df.chr2.10kb, "src/alignment/GCF_902167405.1_gadMor3.0_chr2by10kb.gff", row.names = FALSE, 

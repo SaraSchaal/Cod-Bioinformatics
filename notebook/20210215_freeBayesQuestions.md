@@ -5,8 +5,8 @@ Questions:
 2) Should I be filtering any reads beforehand?
 3) From my understanding, I will be making one large Bam file with all samples to then pipe into freebayes? I have all my individual samples sorted and indexed but do I then need to resort and reindex when I make this big file? 
 4) -C how many observations should we consider a variant? 
-5) Skip over regions with really high read depth with -g flag? 
-6) Run in parallel with freebayes-parallel?
+5) -g Skip over regions with really high read depth? 
+6) freebayes-parallel - Run in parallel?
 7) -@ --variant-input VCF Use variants reported in VCF file as input to the algorithm. A report will be generated for every record in the VCF file. Do we need this for potentially the PanI locus?
 8) -m min mapping or -q base quality mapping default is 30 and base default is 20
 9) -! min-coverage to process as a site

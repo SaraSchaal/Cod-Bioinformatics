@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name=Pop6_18017_alnCheck
+#SBATCH --mem=2Gb
+#SBATCH --mail-user=schaal.s@northeastern.edu
+#SBATCH --mail-type=FAIL
+#SBATCH --partition=lotterhos
+#SBATCH --time=4:00:00
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=1
+#SBATCH --output=bedtools_coverage/Pop6_18017bedCov.%j.out
+#SBATCH --error=bedtools_coverage/Pop6_18017bedCov.%j.err
+awk -F"\t" '$1~/NC_044048.1/' Pop6_18017.coverageCalcDflag.txt > bedtools_coverage/Pop6_18017.coverageCalcChr1.txt
+awk -F"\t" '$1~/NC_044049.1/' Pop6_18017.coverageCalcDflag.txt > bedtools_coverage/Pop6_18017.coverageCalcChr2.txt
