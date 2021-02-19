@@ -1,5 +1,9 @@
 ## FreeBayes
 
+KEL: **Sara cannot afford the time to run FreeBayes twice if it takes a few weeks to run. Can you guarantee with 100% certainty that she will not have to run it again?**
+
+--> If Jon cannot gaurantee that with 100% certainty, then develop a strategy to get variants called on subsets of the data that will finish quicker.
+
 Questions: 
 1) we have some populations that we are unsure will be separate populations (i.e., spring spawners) do we need to account for that in the SNP calling?
 2) Should I be filtering any reads beforehand?
