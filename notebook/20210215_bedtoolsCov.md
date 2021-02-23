@@ -82,6 +82,22 @@ Figures shows average coverage across chromosomes which is calculated as the ave
 
 ## Bedtools coverage using -d flag and R scriipt to make plots across the genome
 1) generate coverage calculations using bedtools with the -d flag 
+```
+	#!/bin/bash
+	#SBATCH --job-name=Pop1_16216_bedCov
+	#SBATCH --mem=50Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=4:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=bedtools_coverage/clustOut/Pop1_16216bedCov.%j.out
+	#SBATCH --error=bedtools_coverage/clustOut/Pop1_16216bedCov.%j.err
+	module load lotterhos/2020-08-24
+	source activate lotterhos-py38
+	bedtools coverage -a Cod_genome_data/GCF_902167405.1_gadMor3.0_genomic_chroms.gff -b samtools_sortedBam_Out/Pop1_16216aln.sorted.bam -sorted -d > bedtools_coverage/Pop1_16216.coverageCalcDflag.txt | awk '{print $10,$11}' > bedtools_coverage/Pop6_18017.coverageCalcTest.txt
+```
 2) subset for just the chromosome data and the columns of interest in the output file (reduces file sizes from 111GB to 17GB)
 ```
 	#!/bin/bash
