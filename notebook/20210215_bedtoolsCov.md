@@ -74,3 +74,39 @@ For example, the above line would be (6404686 * 121)/30875876 = 25.1X for chr 1
 Figures shows average coverage across chromosomes which is calculated as the average per base coverage divided by the total length of the chromosome.  
 
 ![Bedtools genomecov Calc](../Figures/SampCoverage_chrom_genomCov.pdf)
+
+
+## Bedtools coverage using -d flag and R scriipt to make plots across the genome
+1) generate coverage calculations using bedtools with the -d flag 
+2) subset for just the chromosome data and the columns of interest in the output file (reduces file sizes from 111GB to 17GB)
+
+	#!/bin/bash
+	#SBATCH --job-name=Pop1_16216_alnCheck
+	#SBATCH --mem=2Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=4:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=bedtools_coverage/clustOut/Pop1_16216awk.%j.out
+	#SBATCH --error=bedtools_coverage/clustOut/Pop1_16216awk.%j.err
+	awk -F"\t" '$1~/NC*/' bedtools_coverage/Pop1_16216.coverageCalcDflag.txt | awk '{print $1,$11,$12}' > bedtools_coverage/Pop1_16216.coverageCalcChr.txt
+
+3) run the output file through the R script for calculating averages for different window sizes and plot results in ggplot
+
+
+![Bedtools coverage - 100X cutoff Pop1_16216](../Figures/Pop1_16216100XcoveragePlot10000.png)
+![Bedtools coverage - Max cutoff Pop1_16216](../Figures/Pop1_16216MaxcoveragePlot10000.png)
+
+![Bedtools coverage - 100X cutoff Pop1_17291](../Figures/Pop1_17291100XcoveragePlot10000.png)
+![Bedtools coverage - Max cutoff Pop1_17291](../Figures/Pop1_17291MaxcoveragePlot10000.png)
+
+![Bedtools coverage - 100X cutoff Pop4_17236](../Figures/Pop4_17236100XcoveragePlot10000.png)
+![Bedtools coverage - Max cutoff Pop4_17236](../Figures/Pop4_17236MaxcoveragePlot10000.png)
+
+![Bedtools coverage - 100X cutoff Pop5_17278](../Figures/Pop5_17278100XcoveragePlot10000.png)
+![Bedtools coverage - Max cutoff Pop5_17278](../Figures/Pop5_17278MaxcoveragePlot10000.png)
+
+![Bedtools coverage - 100X cutoff Pop6_18017](../Figures/Pop6_18017100XcoveragePlot10000.png)
+![Bedtools coverage - Max cutoff Pop6_18017](../Figures/Pop6_18017MaxcoveragePlot10000.png)
