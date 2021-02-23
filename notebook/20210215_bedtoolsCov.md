@@ -96,7 +96,7 @@ Figures shows average coverage across chromosomes which is calculated as the ave
 	#SBATCH --error=bedtools_coverage/clustOut/Pop1_16216bedCov.%j.err
 	module load lotterhos/2020-08-24
 	source activate lotterhos-py38
-	bedtools coverage -a Cod_genome_data/GCF_902167405.1_gadMor3.0_genomic_chroms.gff -b samtools_sortedBam_Out/Pop1_16216aln.sorted.bam -sorted -d > bedtools_coverage/Pop1_16216.coverageCalcDflag.txt | awk '{print $10,$11}' > bedtools_coverage/Pop6_18017.coverageCalcTest.txt
+	bedtools coverage -a Cod_genome_data/GCF_902167405.1_gadMor3.0_genomic_chroms.gff -b samtools_sortedBam_Out/Pop1_16216aln.sorted.bam -sorted -d > bedtools_coverage/Pop1_16216.coverageCalcDflag.txt 
 ```
 2) subset for just the chromosome data and the columns of interest in the output file (reduces file sizes from 111GB to 17GB)
 ```
@@ -114,6 +114,7 @@ Figures shows average coverage across chromosomes which is calculated as the ave
 	awk -F"\t" '$1~/NC*/' bedtools_coverage/Pop1_16216.coverageCalcDflag.txt | awk '{print $1,$11,$12}' > bedtools_coverage/Pop1_16216.coverageCalcChr.txt
 ```
 3) run the output file through the R script for calculating averages for different window sizes and plot results in ggplot
+this was very memory intensive. Used 84GB of memory on cluster and ran for 4.5 hours to produce the plots below.
 
 
 ![Bedtools coverage - 100X cutoff Pop1_16216](../Figures/Pop1_16216100XcoveragePlot10000.png)
