@@ -6,9 +6,11 @@ You do not need to convert your bam file to bed. Bedtools current version is set
 
 ## BEDTOOLS COVERAGE (RESULTS DON'T MAKE SENSE): 
 Example run for coverage calculator: 
+```
 	module load lotterhos/2020-08-24
 	source activate lotterhos-py38
 	bedtools coverage -a Cod_genome_data/GCF_902167405.1_gadMor3.0_genomic_scaff_contigs.gff -b Pop1_16216aln.sorted.bam -sorted > Pop1_16216.coverageCalc.txt
+```
 
 ### the output file has 4 columns of information: 
 
@@ -20,6 +22,7 @@ Example run for coverage calculator:
 
 
 ### head of gff file: 
+```
 	[schaal.s@login-01 CodGenomes]$ head -n 20 Cod_genome_data/GCF_902167405.1_gadMor3.0_genomic_scaff_contigs.gff 
 	##gff-version 3
 	#!gff-spec-version 1.21
@@ -32,23 +35,23 @@ Example run for coverage calculator:
 	NC_044048.1	RefSeq	region	1	30875876	.	+	.	ID=NC_044048.1:1..30875876;Dbxref=taxon:8049;Name=1;chromosome=1;gbkey=Src;genome=chromosome;mol_type=genomic DNA
 	NC_044049.1	RefSeq	region	1	28732775	.	+	.	ID=NC_044049.1:1..28732775;Dbxref=taxon:8049;Name=2;chromosome=2;gbkey=Src;genome=chromosome;mol_type=genomic DNA
 	NC_044050.1	RefSeq	region	1	30954429	.	+	.	ID=NC_044050.1:1..30954429;Dbxref=taxon:8049;Name=3;chromosome=3;gbkey=Src;genome=chromosome;mol_type=genomic DNA
-
+```
 ### head of output file for coverage calc:
-
+```
 	NC_044048.1	RefSeq	region	1	30875876	.	+	.	ID=NC_044048.1:1..30875876;Dbxref=taxon:8049;Name=1;chromosome=1;gbkey=Src;genome=chromosome;mol_type=genomic DNA	6404686	29254940	30875876	0.9475015
-
+```
 Figures shows average coverage across chromosomes which is calculated as the number of reads that overlap with chromosomes in the cod genome multipled by the samples average length of read from samtools flagstat output divided by the total length of the chromosome.
 For example, the above line would be (6404686 * 121)/30875876 = 25.1X for chr 1
 
 ![Bedtools Coverage Calc](../Figures/SampCoverage_chrom_genom.pdf)
 
 ## BEDTOOLS GENOMECOV (results make sense):
-
-	Example run for genome coverage calculator: 
+Example run for genome coverage calculator: 
+```
 	module load lotterhos/2020-08-24
 	source activate lotterhos-py38
 	bedtools genomecov -ibam samtools_sortedBam_Out/Pop1_16216aln.sorted.bam -g Cod_genome_data/GCF_902167405.1_gadMor3.0_genomic_scaff_contigs.gff > bedtools_coverage/Pop1_16216.GenCovCalc.txt
-
+```
 ### the output file has 4 columns of information: 
 
 	column 1 - chromosome (or entire genome)
@@ -58,6 +61,7 @@ For example, the above line would be (6404686 * 121)/30875876 = 25.1X for chr 1
 	column 5 - fraction of bases on chromosome (or entire genome) with depth equal to column 2.
 
 ### head of output file for coverage calc:
+```
 	[schaal.s@login-00 bedtools_coverage]$ cat Pop1_16216.GenCovCalc.txt | head -n 20
 	NC_044048.1	0	1657141	30875876	0.0536711
 	NC_044048.1	1	284236	30875876	0.00920576
@@ -70,7 +74,7 @@ For example, the above line would be (6404686 * 121)/30875876 = 25.1X for chr 1
 	NC_044048.1	8	1326686	30875876	0.0429684
 	NC_044048.1	9	1447772	30875876	0.0468901
 	NC_044048.1	10	1559483	30875876	0.0505081
-
+```
 Figures shows average coverage across chromosomes which is calculated as the average per base coverage divided by the total length of the chromosome.  
 
 ![Bedtools genomecov Calc](../Figures/SampCoverage_chrom_genomCov.pdf)
@@ -79,7 +83,7 @@ Figures shows average coverage across chromosomes which is calculated as the ave
 ## Bedtools coverage using -d flag and R scriipt to make plots across the genome
 1) generate coverage calculations using bedtools with the -d flag 
 2) subset for just the chromosome data and the columns of interest in the output file (reduces file sizes from 111GB to 17GB)
-
+```
 	#!/bin/bash
 	#SBATCH --job-name=Pop1_16216_alnCheck
 	#SBATCH --mem=2Gb
@@ -92,7 +96,7 @@ Figures shows average coverage across chromosomes which is calculated as the ave
 	#SBATCH --output=bedtools_coverage/clustOut/Pop1_16216awk.%j.out
 	#SBATCH --error=bedtools_coverage/clustOut/Pop1_16216awk.%j.err
 	awk -F"\t" '$1~/NC*/' bedtools_coverage/Pop1_16216.coverageCalcDflag.txt | awk '{print $1,$11,$12}' > bedtools_coverage/Pop1_16216.coverageCalcChr.txt
-
+```
 3) run the output file through the R script for calculating averages for different window sizes and plot results in ggplot
 
 
