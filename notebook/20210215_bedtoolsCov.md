@@ -113,7 +113,7 @@ Figures shows average coverage across chromosomes which is calculated as the ave
 	#SBATCH --error=bedtools_coverage/clustOut/Pop1_16216awk.%j.err
 	awk -F"\t" '$1~/NC*/' bedtools_coverage/Pop1_16216.coverageCalcDflag.txt | awk '{print $1,$11,$12}' > bedtools_coverage/Pop1_16216.coverageCalcChr.txt
 ```
-3) run the output file through the R script for calculating averages for different window sizes and plot results in ggplot
+3) run the output file through the R script for calculating averages for different window sizes and plot results in ggplot (plotSubmit.sh with subsetBedtoolsCov.R)
 this was very memory intensive. Used 84GB of memory on cluster and ran for 4.5 hours to produce the plots below.
 
 
