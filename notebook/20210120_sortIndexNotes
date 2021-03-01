@@ -1,0 +1,54 @@
+# Sort and index using samtools
+
+## Sam to Bam is quick and easy. Each sample runs for about 35-40 minutes and requires about 20MB of memory. 
+```
+	#!/bin/bash
+	#SBATCH --job-name=Pop4_17226_alnSamToBam
+	#SBATCH --mem=2Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=4:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=samtools_samToBam_Out/clustOut/Pop4_17226.%j.out
+	#SBATCH --error=samtools_samToBam_Out/clustOut/Pop4_17226.%j.err
+	module load samtools/1.9
+	samtools view -S -b BWA_Out/Pop4_17226aln.sam > samtools_samToBam_Out/Pop4_17226aln.bam
+```
+## Sorting files takes a lot of memory, but not a lot of time. There is one trick about the memory part to keep in mind. You need to set memory for the cluster but also need to set the memory alottement allowed for samtools sort to store data in. If you make the memory in samtools too low it will create 100s to 1000s of temporary files that it will later need to knit back together. I upped the memory so that it didn't have to do this for my files. HOWEVER, you need to set the memory to value that is lower than what you give to the cluster. If it is exactly the same or near the amount you gave to the cluster, it will fail and say it went over the memory limits. Therefore, I used 40GB of memory in the samtools code and I lisited 50 GB of memory for each sample on the cluster.
+
+```
+	#!/bin/bash
+	#SBATCH --job-name=Pop4_17226_alnSortedBam
+	#SBATCH --mem=50Gb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=24:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=samtools_sortedBam_Out/clustOut/Pop4_17226.%j.out
+	#SBATCH --error=samtools_sortedBam_Out/clustOut/Pop4_17226.%j.err
+	module load samtools/1.9
+	samtools sort -m 40G samtools_samToBam_Out/Pop4_17226aln.bam > samtools_sortedBam_Out/Pop4_17226aln.sorted.bam
+```
+
+
+## Indexing the files is also quick and easy. It runs for a few minutes around 3-5 min and uses 15 MB of memory. 
+
+```
+	#!/bin/bash
+	#SBATCH --job-name=Pop4_17226_alnIndexBam
+	#SBATCH --mem=50Mb
+	#SBATCH --mail-user=schaal.s@northeastern.edu
+	#SBATCH --mail-type=FAIL
+	#SBATCH --partition=lotterhos
+	#SBATCH --time=2:00:00
+	#SBATCH --nodes=1
+	#SBATCH --tasks-per-node=1
+	#SBATCH --output=samtools_indexedBam_Out/clustOut/Pop4_17226.%j.out
+	#SBATCH --error=samtools_indexedBam_Out/clustOut/Pop4_17226.%j.err
+	module load samtools/1.9
+	samtools index samtools_sortedBam_Out/Pop4_17226aln.sorted.bam > samtools_indexedBam_Out/Pop4_17226aln_sorted_indexed
+```
