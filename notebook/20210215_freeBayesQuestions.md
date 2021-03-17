@@ -21,3 +21,5 @@ min complex -E 3 is the default don't need to change
 Notes:
 
 freebayes -b BIGbamfile.bam -f reference.fasta > out.vcf
+
+-m 5 -q 5 -E 3 --min-repeat-entropy 1 --populations popmap -n 10 -F 0.1

@@ -15,6 +15,6 @@ The tool's main output is a new SAM or BAM file, in which duplicates have been i
 
 	###cd ${SLURM_SUBMIT_DIR}
 	source activate lotterhos_utils_sara
-	picard MarkDuplicates I=../samtools_sortedBam_Out/Pop9_18093aln.sorted.bam O=../picard_Out/Pop9_18093aln.sorted.md.bam M=md_metrics.txt OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 TAGGING_POLICY=OpticalOnly &> md.pop9_18093aln.sorted.md.log
+	picard MarkDuplicates I=../samtools_sortedBam_Out/Pop9_18093aln.sorted.bam O=../picard_Out/Pop9_18093aln.sorted.md.bam M=md_metrics.txt OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 TAGGING_POLICY=OpticalOnly &> pop9_18093aln.sorted.md.log
 ```
 
