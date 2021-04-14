@@ -1,0 +1,25 @@
+## SNP Filtering Criteria
+BCFtools (faster than VCFtools)
+
+### Filtering criteria
+indels 
+multi allelic site
+MAF > 0.05 (MAF of 0.1)
+found in 90% individuals (95%)
+PHRED quality > 30
+coverage >5x 70x<
+
+Are there any plots we want to make or statistics that we want to output before we filter? 
+
+### Good tutorial on vcftools filtering:
+https://speciationgenomics.github.io/filtering_vcfs/
+
+vcftools --gzvcf filename.vcf.gz --max_missing 0.95 --minQ 30 --maf 0.1 --max-alleles 2 --remove-indels --min-meanDP 5 --max-meanDP 70 --recode | gzip filename.vcf.gz
+
+### Now try to convert to bcftools:
+
+bcftools -O b -o filename.bcf --exclude-types indels --max-alleles 2 -q 0.01:minor -e "QUAL < 30 || F_MISSING < 0.05 || DP > 5 || DP < 70" 
+
+
+
+
