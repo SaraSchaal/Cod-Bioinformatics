@@ -21,5 +21,12 @@ vcftools --gzvcf filename.vcf.gz --max_missing 0.95 --minQ 30 --maf 0.1 --max-al
 bcftools -O b -o filename.bcf --exclude-types indels --max-alleles 2 -q 0.01:minor -e "QUAL < 30 || F_MISSING < 0.05 || DP > 5 || DP < 70" 
 
 
+## KEL notes:
+Sizes of eastern oyster genome vcf SNP files: (GB is gigabytes)
+* found in 100% of individuals and maf 0.05 - 23GB
+* found in 100% of individuals and maf 0.01 - 41GB
+* found in 95% of individuals and maf 0.05 - 118 GB
+* found in 90% of individuals and maf 0.01 - 259GB
 
+I would opt for 99% of individuals and MAF of 0.05. That will give you plenty of SNPs for analysis, and hopefully a file size less than 50GB.
 
