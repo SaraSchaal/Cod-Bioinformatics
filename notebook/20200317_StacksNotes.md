@@ -1,16 +1,15 @@
-#### Read header of a file
+## Stacks
+- Searches sequence reads for barcodes that you supply and demultiplex the reads using your barcode file specifiying which barcode belongs to which sample. This will also trim off those barcodes. Move to quality control after this step. 
 
-# read first few lines
-	zcat file.gz | head -n 1
-
-#### Example Input File
+### Example Input File
+specifications for this sample  
 
 	Sample 	- 17_304_Gm 
 	Adapter - ACTTGA
 	i5 - 2 - GCCTCTAT (ATAGAGGC RevCom)
 	i7 - 9 - GATCAG
 
-## Read 1
+#### Read 1
 [schaal.s@login-00 CodGenomes]$ zcat i5-2-i7-9_R1_001.fastq.gz | head -n 10
 
 	@GWNJ-1012:218:GW191226406th:1:1101:1090:1000 1:N:0:GATCAG+ATAGAGGC
@@ -24,7 +23,7 @@
 	@GWNJ-1012:218:GW191226406th:1:1101:6840:1000 1:N:0:GATCAG+ATAGAGGC
 	ACTTGAAAAAAATACATAGCGGCCATGGACAGGATGACCTCTATGACAATGATAGAAACAGAAAGGACGCGGAGACTCTTGAGTCATCAAGTAGATCGGAAGAGCACACGTCTGAACTCCAGTCACGATCAGATCTCGTATGCCGTCTTC
 	
-## Read 2
+#### Read 2
 [schaal.s@login-00 CodGenomes]$ zcat i5-2-i7-9_R2_001.fastq.gz | head -n 10
 
 	@GWNJ-1012:218:GW191226406th:1:1101:1090:1000 2:N:0:GATCAG+ATAGAGGC
@@ -38,16 +37,14 @@
 	@GWNJ-1012:218:GW191226406th:1:1101:6840:1000 2:N:0:GATCAG+ATAGAGGC
 	ACTTGAAGACTCAAGAGTCTCCGCGTCCTTTCTGTTTCTATCATTGTCATAGAGGTCATCCTGTCCATGGCCGCTATGTATTTTTATCAAGTAGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTGCCTCTATGTGTAGATCTCGGTGGT
 
-## Stacks
-- Searches sequence reads for barcodes that you supply and demultiplex the reads using your barcode file specifiying which barcode belongs to which sample. This will also trim off those barcodes. Move to quality control after this step. 
 
-# use this flag for the barcode type because we have an inline barcode on each side of the read that matches
+ use this flag for the barcode type because we have an inline barcode on each side of the read that matches
 	--inline_inline
 
-# Example use on one file that only has a single barcode in it (barcodefilei52_i79)
+ Example use on one file that only has a single barcode in it (barcodefilei52_i79)
 	ACTTGA ACTTGA Pop3_18304
 
-# command line code for processing radtags on cluster
+ command line code for processing radtags on cluster
 	process_radtags -P -p Practice/GenomeFiles/ -o Practice/Stacks_Out/ -b Practice/barcodeFilei52_i79.txt --inline_inline --disable_rad_check
 
 
