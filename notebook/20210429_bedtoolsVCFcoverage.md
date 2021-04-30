@@ -36,3 +36,4 @@ use vcfCoverageCheck.R script to make graphs.
 <img src="../Figures/SNPcoverage/snpcoverage50kb.png" width="500">  
 <img src="../Figures/SNPcoverage/snpcoverage100kb.png" width="500">  
 <img src="../Figures/SNPcoverage/snpcoverage150kb.png" width="500">  
+<img src="../Figures/SNPcoverage/snpcoverage50kb_onePerLine.png" width="500"> 

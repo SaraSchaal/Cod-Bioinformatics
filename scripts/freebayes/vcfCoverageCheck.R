@@ -16,7 +16,7 @@ library(ggplot2)
 
 ggplot(data = snpcov50kb, aes(x = windowEnd, y = coverage)) +
   geom_point(col = "cornflowerblue", alpha = 0.5) +
-  facet_wrap(~chrom) +
+  facet_wrap(~chrom, ncol = 1, nrow = 23) +
   labs(y = "Coverage", x = "location every 50kb bases", 
        title = "Genome Coverage of SNPs every 50kb") +
   ylim(0, max(snpcov50kb$coverage)) +
