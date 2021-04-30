@@ -33,6 +33,6 @@ Memory Efficiency: 63.73% of 100.00 GB
 
 use vcfCoverageCheck.R script to make graphs.
 
-<img src="../figures/SNPcoverage/snpcoverage50kb.png" width="500">  
-<img src="../figures/SNPcoverage/snpcoverage100kb.png" width="500">  
-<img src="../figures/SNPcoverage/snpcoverage150kb.png" width="500">  
+<img src="../Figures/SNPcoverage/snpcoverage50kb.png" width="500">  
+<img src="../Figures/SNPcoverage/snpcoverage100kb.png" width="500">  
+<img src="../Figures/SNPcoverage/snpcoverage150kb.png" width="500">  
