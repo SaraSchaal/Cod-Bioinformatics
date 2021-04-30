@@ -3,6 +3,11 @@
 ## The first thing you need to do for BWA to work is index your genome. 
 Download your genome from NCBI and run the following line
 
+Jon typically adjusts the gap penalty to 5 and the mismatch penalty to 3. He finds that this consistently gives better results with a lot of marine species. However, it’s worth doing a couple of test runs with 3–5 samples comparing that to the default.
+
+Gap penalties are used to adjust alignment scores based on the number and length of gaps and mismatches are when there are bases that devate from the reference that the read is aligning to. This helps alleviate sequencing errors influencing the alignment.
+
+
 ## Test three samples using BWA parameters suggested by Jon P compared to the default
 Pop1_16216
 Pop5_17273
@@ -11,7 +16,7 @@ Pop7_18156
 ---> example script for running on cluster with *Jon P parameter suggestions*
 
 	#!/bin/bash
-	#SBATCH --job-name=Pop1_16216_submitBWA.txt
+	#SBATCH --job-name=Pop1_16216_submitBWA
 	#SBATCH --mem=10Gb
 	#SBATCH --mail-user=schaal.s@northeastern.edu
 	#SBATCH --mail-type=FAIL
@@ -23,12 +28,12 @@ Pop7_18156
 	#SBATCH --error=BWA_Out/clustOut/Pop1_16216.%j.err
 	module load lotterhos/2020-08-24
 	source activate lotterhos-py38
-	bwa mem BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna FastP_Out/Pop1_16216.R1.fq.gz FastP_Out/Pop1_16216.R2.fq.gz  > BWA_Out/Pop1_16216aln.sam -O 5 -B 3
+	bwa mem BWA_genome/GCF_902167405.1_gadMor3.0_genomic.fna FastP_Out/Pop1_16216.R1.fq.gz FastP_Out/Pop1_16216.R2.fq.gz  > BWA_Out/Pop1_16216aln.sam -O 5 -B 3 -I 300
 
 ---> example script for running on cluster with *default* parameters
 
 	#!/bin/bash
-	#SBATCH --job-name=Pop1_16216_submitBWA.txt
+	#SBATCH --job-name=Pop1_16216_submitBWA
 	#SBATCH --mem=10Gb
 	#SBATCH --mail-user=schaal.s@northeastern.edu
 	#SBATCH --mail-type=FAIL
@@ -45,7 +50,7 @@ Pop7_18156
 
 ## check quality of alignment with samtools
 	#!/bin/bash
-	#SBATCH --job-name=Pop7_18156_alnCheckDef.txt
+	#SBATCH --job-name=Pop7_18156_alnCheckDef
 	#SBATCH --mem=2Gb
 	#SBATCH --mail-user=schaal.s@northeastern.edu
 	#SBATCH --mail-type=FAIL

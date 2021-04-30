@@ -14,11 +14,11 @@ Are there any plots we want to make or statistics that we want to output before 
 ### Good tutorial on vcftools filtering:
 https://speciationgenomics.github.io/filtering_vcfs/
 
-vcftools --gzvcf filename.vcf.gz --max_missing 0.95 --minQ 30 --maf 0.1 --max-alleles 2 --remove-indels --min-meanDP 5 --max-meanDP 70 --recode | gzip filename.vcf.gz
+vcftools --gzvcf filename.vcf.gz --max_missing 0.99 --minQ 30 --maf 0.05 --max-alleles 2 --remove-indels --min-meanDP 5 --max-meanDP 70 --recode | gzip filename.vcf.gz
 
 ### Now try to convert to bcftools:
 
-bcftools -O b -o filename.bcf --exclude-types indels --max-alleles 2 -q 0.01:minor -e "QUAL < 30 || F_MISSING < 0.05 || DP > 5 || DP < 70" 
+bcftools view -O b -o filename.vcf --exclude-types indels --max-alleles 2 -q 0.05:minor -e "QUAL < 30 || F_MISSING < 0.01 || DP > 5 || DP < 70" 
 
 
 ## KEL notes:

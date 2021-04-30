@@ -1,15 +1,16 @@
 ## Stacks
-- Searches sequence reads for barcodes that you supply and demultiplex the reads using your barcode file specifiying which barcode belongs to which sample. This will also trim off those barcodes. Move to quality control after this step. 
+- If your samples need to be demultiplexed, running the program Stacks is a necessary first step. Stacks process_radtags function searches sequence reads for barcodes that you supply and demultiplex the reads using your barcode file specifiying which barcode belongs to which sample. This program will also trim off those barcodes. 
 
-### Example Input File
-specifications for this sample  
+My samples were multiplexed using 3 different unique sequences. Every sample had a unique combination of an i5 primer, i7 primer and adapter barcode. Data from the sequencing facility will demultiplex to the level of unique combinations of i5 and i7 primers. Therefore for my samples, I had 32 unique i5 and i7 primer combinations and so the sequencing facility sent me 64 fastq.gz files one for the forward sequence and one for the reverse for all 32 combinations. I will take one file as an example in the following code. 
 
-	Sample 	- 17_304_Gm 
-	Adapter - ACTTGA
-	i5 - 2 - GCCTCTAT (ATAGAGGC RevCom)
-	i7 - 9 - GATCAG
+#### process_radtags manual and specific walkthrough for process_radtags
+https://catchenlab.life.illinois.edu/stacks/manual/
+https://catchenlab.life.illinois.edu/stacks/comp/process_radtags.php
+
+### Example Fastq File from Sequencing Facility 
 
 #### Read 1
+```
 [schaal.s@login-00 CodGenomes]$ zcat i5-2-i7-9_R1_001.fastq.gz | head -n 10
 
 	@GWNJ-1012:218:GW191226406th:1:1101:1090:1000 1:N:0:GATCAG+ATAGAGGC
@@ -22,8 +23,9 @@ specifications for this sample
 	FFFFFF,FFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFF:FFFF:::F,F::FFFFF
 	@GWNJ-1012:218:GW191226406th:1:1101:6840:1000 1:N:0:GATCAG+ATAGAGGC
 	ACTTGAAAAAAATACATAGCGGCCATGGACAGGATGACCTCTATGACAATGATAGAAACAGAAAGGACGCGGAGACTCTTGAGTCATCAAGTAGATCGGAAGAGCACACGTCTGAACTCCAGTCACGATCAGATCTCGTATGCCGTCTTC
-	
+```	
 #### Read 2
+```
 [schaal.s@login-00 CodGenomes]$ zcat i5-2-i7-9_R2_001.fastq.gz | head -n 10
 
 	@GWNJ-1012:218:GW191226406th:1:1101:1090:1000 2:N:0:GATCAG+ATAGAGGC
@@ -36,13 +38,43 @@ specifications for this sample
 	FFFFFF,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,FFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFF:FF,FF:
 	@GWNJ-1012:218:GW191226406th:1:1101:6840:1000 2:N:0:GATCAG+ATAGAGGC
 	ACTTGAAGACTCAAGAGTCTCCGCGTCCTTTCTGTTTCTATCATTGTCATAGAGGTCATCCTGTCCATGGCCGCTATGTATTTTTATCAAGTAGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTGCCTCTATGTGTAGATCTCGGTGGT
+```
+
+#### Stacks - process_radtags
 
 
- use this flag for the barcode type because we have an inline barcode on each side of the read that matches
-	--inline_inline
+##### barcode file
+For each set of paired end files that need to be demultiplexed, a barcode file needsto be created. For example, for files i5-4-i7-11_R1_001.fastq.gz and i5-4-i7-11_R2_001.fastq.gz its barcode file is as follows:
 
- Example use on one file that only has a single barcode in it (barcodefilei52_i79)
-	ACTTGA ACTTGA Pop3_18304
+```
+ATCACG	ATCACG	Pop6_18001
+CGATGT	CGATGT	Pop7_18173
+TTAGGC	TTAGGC	Pop8_18148
+TGGCCA	TGGCCA	Pop9_18064
+ACAGTG	ACAGTG	Pop3_16228
+GCCAAT	GCCAAT	Pop4_17210
+CAGATC	CAGATC	Pop6_18035
+ACTTGA	ACTTGA	Pop6_18038
+GATCAG	GATCAG	Pop8_18130
+TAGCTT	TAGCTT	Pop8_18113
+GGCTAC	GGCTAC	Pop7_18190
+CTTGCA	CTTGCA	Pop1_17327
+```
+
+
+This file contains the 12 barcodes that have the i5_4 and i7_11 index and which sample that combination belongs to. This file is tab delimited and because I had inline barcodes, meaning they were the same on both ends of the read, I have the same barcode sequence in the first and second column. Then the sample ID is on the right. 
+
+Sample naming convention is important for downstream steps. The way my samples are names are first a Pop identifier for what a priori population they belonged to (see Sample Notes file for my population IDs). Then a 5 digit identifier for the specific sample from that population where the first two digits represent the year the sample was collected and the last 3 digits represent the indivdiual sample ID from that sampling year.
+
+I wrote a simple R script to create the barcodefiles for each primer index combination. See file: Stacks_FileCreate.R
+
+
+##### additional flags 
+ 
+```--inline_inline ``` The barcode option flag has 6 different options and you have to use the proper flag for you your barcodes or indexes need to be demultiplexed. Because my samples have inline barcodes on either end of the sequence I need to use the --inline_inline flag. 
+
+```-P``` If paired end sequencing was used you need to add the -P flag to indicate this.
+
 
  command line code for processing radtags on cluster
 	process_radtags -P -p Practice/GenomeFiles/ -o Practice/Stacks_Out/ -b Practice/barcodeFilei52_i79.txt --inline_inline --disable_rad_check
@@ -76,8 +108,7 @@ process_radtags -P -p Practice/GenomeFiles/ -o Practice/Stacks_Out/ -b Practice/
 # The process_radtags program wants to keep the reads in phase, so that the first read in the sample_XXX.1.fq file is the mate of the first read in the sample_XXX.2.fq file. Likewise for the second pair of reads being the second record in each of the two files and so on. When one read in a pair is discarded due to low quality or a missing restriction enzyme cut site, the remaining read can't simply be output to the sample_XXX.1.fq or sample_XXX.2.fq files as it would cause the remaining reads to fall out of phase. Instead, this read is considered a remainder read and is output into the sample_XXX.rem.1.fq file if the paired-end was discarded, or the sample_XXX.rem.2.fq file if the single-end was discarded.
 
 ### Code for running on the cluster
-
-##### CODE STARTS HERE v ######
+```
 	#!/bin/bash
 	#SBATCH --job-name=stacksTest                     # sets the job name
 	#SBATCH -n 1                                 	  # reserves 1 machine
@@ -89,18 +120,19 @@ process_radtags -P -p Practice/GenomeFiles/ -o Practice/Stacks_Out/ -b Practice/
 	#SBATCH --time=24:00:00                           # reserves machines/cores for 24 hours.
 	#SBATCH --output=stacksTest.%j.out                # sets the standard output to be stored in file, where %j is the job id
 	#SBATCH --error=stacksTest.%j.err                 # sets the standard error to be stored in file
-
+	
 	module load lotterhos/2019-11-15
 
 	srun process_radtags -P -p GenomeFiles/ -o ../Stacks_Out/ -b Practice/barcodeFilei52_i79.txt --inline_inline --disable_rad_check
+```
 
-##### CODE ENDS HERE ^ ######
 
 # To check status of submission on Discovery #
+```
 	squeue -u schaal.s
 	squeue -p lotterhos
 	seff <jobid> #output stats
-
+```
 
 ### Results 
 Time: 				each file took approx. 7 hrs  
@@ -131,6 +163,15 @@ cat i58_i711rerun/Pop2_17011a.rem.2.fq.gz i59_i76rerun/Pop2_17011b.rem.2.fq.gz >
 1b - 742691
 2a - 1584435
 2b - 786731
+
+
+specifications for this sample  
+
+	Sample 	- 17_304_Gm 
+	Adapter - ACTTGA
+	i5 - 2 - GCCTCTAT (ATAGAGGC Reverse Complement)
+	i7 - 9 - GATCAG
+
 ## Read 1 Post Stacks
 
 [schaal.s@login-00 Stacks_Out]$ zcat Pop3_17304.1.fq.gz | head -n 10
