@@ -54,10 +54,10 @@ load.ld.data <- function (path = NULL) {
                                  header=TRUE,
                                  stringsAsFactors=FALSE)
   
-  ld.data.49990.50kbp <- read.csv(ld.files[which(grepl("_49990-50000", ld.files, fixed=TRUE) == TRUE)], 
-                                  sep="\t",
-                                  header=TRUE,
-                                  stringsAsFactors=FALSE)
+  # ld.data.49990.50kbp <- read.csv(ld.files[which(grepl("_49990-50000", ld.files, fixed=TRUE) == TRUE)], 
+  #                                 sep="\t",
+  #                                 header=TRUE,
+  #                                 stringsAsFactors=FALSE)
   
   # ld.data.99990.100kbp <- read.csv(ld.files[which(grepl("_99990-100000", ld.files, fixed=TRUE) == TRUE)], 
   #                                  sep="\t",
@@ -75,18 +75,18 @@ load.ld.data <- function (path = NULL) {
                   "1000" = ld.data.990.1000bp,
                   "2500" = ld.data.2490.2500bp,
                   "5000" = ld.data.4990.5000bp,
-                  "10000" = ld.data.9990.10kbp,
-                  "50000" = ld.data.49990.50kbp)
+                  "10000" = ld.data.9990.10kbp)
+                  #"50000" = ld.data.49990.50kbp)
                   #"100000" = ld.data.99990.100kbp,
                   #"500000" = ld.data.499990.500kbp)
   return(ld.vars)
 }
 
 # get the LD decay plots for all of the chromosomes in the ld.datasets
-decay.plots <- function (path = NULL, file.suffix = NULL, plot.title = NULL) {
+decay.plots <- function (path = NULL, file.suffix = NULL, plot.title = NULL, chrom.st, chrom.end) {
   ld.datasets <- load.ld.data(path = path)
   
-  CHR <- paste0("NC_0", seq(from = 44048, to = 44070, by = 1), ".1")
+  CHR <- paste0("NC_0", seq(from = chrom.st, to = chrom.end, by = 1), ".1") #44048, #44070
   
   col_vector<-c('#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
                 '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
@@ -122,7 +122,7 @@ decay.plots <- function (path = NULL, file.suffix = NULL, plot.title = NULL) {
     }
   }
   
-  png(paste("figures/1LD_analysis/ldDecayPlot_", file.suffix, ".png", sep=""),
+  png(paste(path, "/figures/ldDecayPlot_", file.suffix, ".png", sep=""),
       width = 8,
       height = 8,
       units = "in",
@@ -153,6 +153,12 @@ decay.plots <- function (path = NULL, file.suffix = NULL, plot.title = NULL) {
   }
   dev.off()
 }
+
+decay.plots(path="/scratch/schaal.s/CodGenomes/12_LD_decay", 
+            file.suffix = "allpops",
+            plot.title = "Atlantic Cod LD Decay",
+            chrom.st = 44048,
+            chrom.end = 44070)
 
 # Get plot for all populations
 #decay.plots(path="data/large_data/ldAnalysisData/allpops/",
