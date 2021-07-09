@@ -16,8 +16,35 @@ For outflank, we use the thin snps as a quasi-independent set of SNPs to estimat
 
 ### global outliers (full dataset)
 
+```
+# global outliers 
+  FSTs_full <- MakeDiploidFSTMat(G_mat, locusNames = colnames(G_mat), popNames = rownames(G_mat))
+  FSTs <- MakeDiploidFSTMat(G_thin, locusNames = colnames(G_thin), popNames = rownames(G_thin))
+  global_out <- OutFLANK(FSTs, NumberOfSamples=295, qthreshold = 0.05, Hmin = 0.1)
+  str(global_out)
+  OutFLANKResultsPlotter(global_out, withOutliers = TRUE,
+                         NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
+                           FALSE, RightZoomFraction = 0.05, titletext = NULL)
+  df.global.outliers <- pOutlierFinderChiSqNoCorr(FSTs_full, Fstbar = global_out$FSTNoCorrbar, 
+                            dfInferred = global_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  global.outliers <- df.global.outliers$OutlierFlag==TRUE
+  png(paste0(folderOut, "outflank_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.global.outliers$LocusName[df.global.outliers$He>0.1], df.global.outliers$FST[df.global.outliers$He>0.1],
+         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Global Outliers")
+    points(df.global.outliers$LocusName[global.outliers], df.global.outliers$FST[global.outliers], col="red", pch=20)  
+  dev.off()
 
-### icelandic cod outliers 
+```
+#### Fst Frequency Distribution
+<img src="../Figures/Outliers/outflank_globalOutliers_FstFreq.png" width="500">  
+
+#### All SNPs
+<img src="../Figures/Outliers/outflank_globalOutliers.png" width="500">  
+
+#### Thinned SNPs
+<img src="../Figures/Outliers/outflank_globalOutliersThin.png" width="500">  
+
+### Icelandic Cod Outliers 
 The inputs that I used in this analysis were first the full G matrix on all \~2,000,000 SNPs for the Icelandic cod popiulations to calculate FSTs (G_mat_ice). I also used the G matrix that resulted from thinning the SNPs using the code from ```snp_autoSVD``` where I subsetted that for just the icelandic cod samples (G_thin_ice) and calculated FSTs based on that full set. I first calculated outliers on the full set using the estimated mean FST and df from the thinned SNP set. This is the first plot below labeled "Icelandic cod outliers - full set" . Then because this looked very off, I tried looking at just the thinned set of SNPs, but this also doesn't look how I would expect. 
 
 ```
@@ -48,7 +75,13 @@ The inputs that I used in this analysis were first the full G matrix on all \~2,
     points(df.ice.outliers.thin$LocusName[ice.outliers.thin], df.ice.outliers.thin$FST[ice.outliers.thin], col="red", pch=20)  
   dev.off()
 ```
+#### Fst Frequency Distribution
+<img src="../Figures/Outliers/outflank_iceOutliers_FstFreq.png" width="500">  
+
+#### All SNPs
 <img src="../Figures/Outliers/outflank_iceOutliers.png" width="500">  
+
+#### Thinned SNPs
 <img src="../Figures/Outliers/outflank_iceOutliersThin.png" width="500"> 
 
 ### Gulf of Maine Outliers
@@ -81,11 +114,16 @@ Same description for Iceland except these outliers make more sense for what I wo
     points(df.GOM.outliers.thin$LocusName[GOM.outliers.thin], df.GOM.outliers.thin$FST[GOM.outliers.thin], col="red", pch=20)  
   dev.off()
 ```
+#### Fst Frequency Distribution
+<img src="../Figures/Outliers/outflank_GOMOutliers_FstFreq.png" width="500">  
 
-<img src="../Figures/Outliers/outflank_GOMOutliers.png" width="500">  
+#### All SNPs  
+<img src="../Figures/Outliers/outflank_GOMOutliers.png" width="500">   
+
+#### Thinned SNPs 
 <img src="../Figures/Outliers/outflank_GOMOutliersThin.png" width="500"> 
 
-## pcadapt
+## Pcadapt
 
 The outliers are confusing. I would have still expected some clusters of outliers in the inverted regions for some of these analysis. I tried pcadapt just on the thinned SNPs and am now updating the code to use the thinned estimation on the full set like I did for outflank.  
 
@@ -95,8 +133,12 @@ global.outliers <- pcadapt(df.global.outliers, K = 5) # 5 chosen based on screep
 plot(global.outliers, option = "screeplot")
 plot(global.outliers)
 ```
-
+#### Global Outliers 
 <img src="../Figures/Outliers/pcadapt_globalOutliers.png" width="500">  
+
+#### Icelandic Cod Outliers
 <img src="../Figures/Outliers/pcadapt_iceOutliers.png" width="500">  
+
+#### GOM Outliers
 <img src="../Figures/Outliers/pcadapt_GOMOutliers.png" width="500">  
 
