@@ -1,232 +1,397 @@
-#### SNP Thinning for LD
+#### SNP Thinning for LD & Identifying Outliers ####
 ## Sara M. Schaal
 
-packages_needed <-  c("bigsnpr", "bigstatsr", "vcfR", "xgboost", "dplyr", 
-                      "ggplot2", "VGAM", "hexbin", "viridisLite")
+  packages_needed <-  c("bigsnpr", "bigstatsr", "vcfR", "xgboost", "dplyr", 
+                        "ggplot2", "VGAM", "hexbin", "viridisLite", "pcadapt")
 
-## Install packages that aren't installed already
-for (i in 1:length(packages_needed)){
-  if(!(packages_needed[i] %in% installed.packages())){install.packages(packages_needed[i], repos = "http://cran.us.r-project.org")}
-}
+  ## Install packages that aren't installed already
+  for (i in 1:length(packages_needed)){
+    if(!(packages_needed[i] %in% installed.packages())){install.packages(packages_needed[i], repos = "http://cran.us.r-project.org")}
+  }
 
-## Load each library
-for (i in 1:length(packages_needed)){
-  library( packages_needed[i], character.only = TRUE)
-}
+  ## Load each library
+  for (i in 1:length(packages_needed)){
+    library( packages_needed[i], character.only = TRUE)
+  }
+  
+  ## Plink download
+  plink2 <- download_plink2(AVX2 = FALSE)
+
+  ## Input and Output folders
+  folderIn <- "./src/bedfiles/"
+  folderOut <- "./"
+
+  ## filter for missing data (only need to run this once to make the files)
+  # chrom 1
+  #snp_plinkQC(plink2, paste0(folderIn, "bedfiles2/VarCall_NC_044048.1.f"),file.type = "--bfile", 
+            #maf = 0.05, geno = 0, "--allow-extra-chr", prefix.out = paste0(folderIn, "bedfiles2/VarCall_NC_044048.1.f_QC"))
+  
+  # all data
+  #snp_plinkQC(plink2, paste0(folderIn, "merged.f.99ind.MAF05"),file.type = "--bfile", 
+              #maf = 0.05, geno = 0, "--allow-extra-chr", prefix.out = paste0(folderIn, "merged.f.99ind.MAF05_QC"))
+  ## one sample dropped out due to missing data
+  
+  ## Reads in bed file made with plink above 
+  bed.file.filt <- snp_readBed(paste0(folderIn, "merged.f.99ind.MAF05_QC.bed"))
+  bigSNP <- snp_attach(bed.file.filt)
+
+  ## pull out genotypes into a matrix and chromosomes into a vector
+  G_full <- bigSNP$genotypes
+  pos_full <- bigSNP$map$physical.pos
+  G_full[1:100]
+  n <- nrow(G_full)
+  m <- ncol(G_full)
+  table(G_full[1:m])
+  sum(is.na(G_full[1:m])) # should have no NAs 
+
+  # Store just G matrix
+  G_mat <- G_full[1:n, 1:m]
+  colnames(G_mat) <- bigSNP$map$physical.pos
+  rownames(G_mat) <- bigSNP$fam$family.ID
+
+  G_coded <- add_code256(big_copy(bigSNP$genotypes,
+                                    type = "raw"),
+                            code=bigsnpr:::CODE_012)
+
+  # get chromosome values
+  chrom_full <- bigSNP$map$chromosome
+  chromNumbers <- seq(from = 44048, to = 44070, by = 1) 
+  chromNames <- data.frame(chromID = paste0("NC_0", chromNumbers, ".1"), chromNum = 1:23)
+  for(j in 1:nrow(chromNames)){
+    chrom_full[chrom_full == chromNames$chromID[j]] <- j
+  }
+  chrom_full <- as.numeric(chrom_full)
 
 
-## Use plink first for conversion and qualiity control - vcf input
-#vcf <- read.vcfR(paste0(folderIn, "merged.f.99ind.MAF05.vcf"))
-folderIn <- "./src/bedfiles/"
-folderOut <- "./"
-#vcf_chrom1 <- read.vcfR(paste0(folderIn, "VarCall_NC_044048.1.f.vcf.gz"))
-plink2 <- download_plink2(AVX2 = FALSE)
+  # remove SNPs that are in long range LD
+  lrLD <- snp_autoSVD(G=G_full, infos.chr = chrom_full,
+                        infos.pos = pos_full, size = 1)
+      # set the window size increase window size to get closer to 200K
+  str(lrLD)
+  lrLD.ind <- attr(lrLD, "subset") # this contains new set of pruned SNPs
+  length(lrLD.ind) 
+  length(G_full[lrLD.ind])
+  G_thin <- G_full[,lrLD.ind]
+  colnames(G_thin) <- bigSNP$map$physical.pos[lrLD.ind]
+  rownames(G_thin) <- bigSNP$fam$family.ID
+  lrLD.tb <- attr(lrLD, "lrldr")
+  sample(lrLD.ind)
 
-## filter missing data
-snp_plinkQC(plink2, paste0(folderIn, "bedfiles2/VarCall_NC_044048.1.f"),file.type = "--bfile", 
-            maf = 0.05, geno = 0, "--allow-extra-chr", prefix.out = paste0(folderIn, "bedfiles2/VarCall_NC_044048.1.f_QC"))
-## one sample dropped out due to missing data
-
-snp_plinkQC(plink2, paste0(folderIn, "merged.f.99ind.MAF05"),file.type = "--bfile", 
-            maf = 0.05, geno = 0, "--allow-extra-chr", prefix.out = paste0(folderIn, "merged.f.99ind.MAF05_QC"))
-
-## Reads in bed file made in the previous line
-bed.file.filt <- snp_readBed(paste0(folderIn, "merged.f.99ind.MAF05_QC.bed"))
-bigSNP <- snp_attach(bed.file.filt)
-
-## pull out genotypes into a matrix and chromosomes into a vector
-G_full <- bigSNP$genotypes
-pos_full <- bigSNP$map$physical.pos
-G_full[1:100]
-n <- nrow(G_full)
-m <- ncol(G_full)
-table(G_full[1:m])
-sum(is.na(G_full[1:m])) # should have no NAs 
-
-G_coded <- add_code256(big_copy(bigSNP$genotypes,
-                                   type = "raw"),
-                          code=bigsnpr:::CODE_012)
-
-# get chromosome values
-chrom_full <- bigSNP$map$chromosome
-chromNumbers <- seq(from = 44048, to = 44070, by = 1) 
-chromNames <- data.frame(chromID = paste0("NC_0", chromNumbers, ".1"), chromNum = 1:23)
-for(j in 1:nrow(chromNames)){
-  chrom_full[chrom_full == chromNames$chromID[j]] <- j
-}
-chrom_full <- as.numeric(chrom_full)
-
-
-# remove SNPs that are in long range LD
-lrLD <- snp_autoSVD(G=G_full, infos.chr = chrom_full,
-                      infos.pos = pos_full, size = 1)
-    # set the window size increase window size to get closer to 200K
-str(lrLD)
-lrLD.ind <- attr(lrLD, "subset") # this contains new set of pruned SNPs
-length(lrLD.ind) 
-length(G_full[lrLD.ind])
-G_thin <- G_full[,lrLD.ind]
-lrLD.tb <- attr(lrLD, "lrldr")
-sample(lrLD.ind)
-
-#df.pcs.full$pop <- factor(df.pcs.full$pop, levels = pop.names)
+  #df.pcs.full$pop <- factor(df.pcs.full$pop, levels = pop.names)
 
 ######################################################################################################
 #### subset SNPs to 200K ####
-set.seed(48)
-subset200K <- sample(lrLD.ind, size = 200000)
-set.seed(NULL)
-#head(sample(lrLD.ind, size = 200000))
-subset200Korder <- subset200K[order(subset200K)]
-G_sub <- G_full[,subset200Korder]
-chrom_sub <- chrom_full[subset200Korder]
-pos_sub <- pos_full[subset200Korder]
 
-random200K <- list(G = G_sub, 
-                   Pos = pos_sub,
-                   Chr = chrom_sub,
-                   Pop.ID = bigSNP$fam$family.ID,
-                   Sample.ID = bigSNP$fam$sample.ID)
-Gsub_coded <- add_code256(big_copy(random200K$G,
-                                   type = "raw"),
-                          code=bigsnpr:::CODE_012)
-saveRDS(random200K, paste(folderOut, "random200KthinSNPs.rds"))
-
-lrLD_sub <- snp_autoSVD(G=Gsub_coded, infos.chr = random200K$Chr,
-                    infos.pos = random200K$Pos, size = 1)
-lrLD_sub.tb <- attr(lrLD_sub, "lrldr")
-rownames(lrLD_sub$u) <- bigSNP$fam$sample.ID
-par(mar=c(4,4,1,1))
-plot(lrLD_sub$d, xlab="PC", ylab= "Variation explained", bty="l")
-
-df.pcs.sub <- data.frame(lrLD_sub$u, pop = bigSNP$fam$family.ID)
-colnames(df.pcs.sub) <- c(paste0("PC", 1:10), "pop")
-pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
-               "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
-for(i in 1:length(pop.names)){
-  #df.pcs.full$pop[df.pcs.full$pop == paste0("Pop", i)] <- pop.names[i]
-  #df.pcs.chrom1$pop[df.pcs.chrom1$pop == paste0("Pop", i)] <- pop.names[i]
-  df.pcs.sub$pop[df.pcs.sub$pop == paste0("Pop", i)] <- pop.names[i]
-}
-df.pcs.sub$pop <- factor(df.pcs.sub$pop, levels = pop.names)
-
-ggplot(df.pcs.sub, aes(x = PC1, y = PC2, color = pop)) + 
-  geom_point(alpha = 0.75) +
-  scale_color_manual(name = "Population", 
-                     values = viridis(length(pop.names))) + 
-  labs(title = "All Samples Full Genome") +
-  theme_bw()
-
-
-G_sub_GOM <- G_full[1:137,subset200Korder]
-chrom_sub_GOM <- chrom_full[subset200Korder]
-pos_sub_GOM <- pos_full[subset200Korder]
-
-random200K_GOM <- list(G = G_sub_GOM, 
-                   Pos = pos_sub_GOM,
-                   Chr = chrom_sub_GOM,
-                   Pop.ID = bigSNP$fam$family.ID[1:137],
-                   Sample.ID = bigSNP$fam$sample.ID[1:137])
-GsubGOM_coded <- add_code256(big_copy(random200K_GOM$G,
-                                   type = "raw"),
-                          code=bigsnpr:::CODE_012)
-saveRDS(random200K_GOM, paste(folderOut, "random200KthinSNPs_GOM.rds"))
-
-lrLD_sub_GOM <- snp_autoSVD(G=GsubGOM_coded, infos.chr = random200K_GOM$Chr,
-                        infos.pos = random200K_GOM$Pos, size = 1)
-
-df.pcs.sub_GOM <- data.frame(lrLD_sub_GOM$u, pop = random200K_GOM$Pop.ID)
-colnames(df.pcs.sub_GOM) <- c(paste0("PC", 1:10), "pop")
-pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
-               "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
-for(i in 1:length(pop.names)){
-  df.pcs.sub_GOM$pop[df.pcs.sub_GOM$pop == paste0("Pop", i)] <- pop.names[i]
-}
-df.pcs.sub_GOM$pop <- factor(df.pcs.sub_GOM$pop, levels = pop.names)
-
-ggplot(df.pcs.sub_GOM, aes(x = PC1, y = PC2, color = pop)) + 
-  geom_point(alpha = 0.75) +
-  scale_color_manual(name = "Population", 
-                     values = viridis(length(pop.names))) + 
-  labs(title = "All Samples Full Genome") +
-  theme_bw()
-
-
-G_sub_ICE <- G_full[138:295,subset200Korder]
-chrom_sub_ICE <- chrom_full[subset200Korder]
-pos_sub_ICE <- pos_full[subset200Korder]
-
-random200K_ICE <- list(G = G_sub_ICE, 
-                       Pos = pos_sub_ICE,
-                       Chr = chrom_sub_ICE,
-                       Pop.ID = bigSNP$fam$family.ID[138:295],
-                       Sample.ID = bigSNP$fam$sample.ID[138:295])
-GsubICE_coded <- add_code256(big_copy(random200K_ICE$G,
-                                      type = "raw"),
-                             code=bigsnpr:::CODE_012)
-saveRDS(random200K_ICE, paste(folderOut, "random200KthinSNPs_ICE.rds"))
-
-lrLD_sub_ICE <- snp_autoSVD(G=GsubICE_coded, infos.chr = random200K_ICE$Chr,
-                            infos.pos = random200K_ICE$Pos, size = 1)
-
-
-df.pcs.sub_ICE <- data.frame(lrLD_sub_ICE$u, pop = random200K_ICE$Pop.ID)
-colnames(df.pcs.sub_ICE) <- c(paste0("PC", 1:10), "pop")
-pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
-               "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
-for(i in 1:length(pop.names)){
-  df.pcs.sub_ICE$pop[df.pcs.sub_ICE$pop == paste0("Pop", i)] <- pop.names[i]
-}
-df.pcs.sub_ICE$pop <- factor(df.pcs.sub_ICE$pop, levels = pop.names)
-
-ggplot(df.pcs.sub_ICE, aes(x = PC1, y = PC2, color = pop)) + 
-  geom_point(alpha = 0.75) +
-  scale_color_manual(name = "Population", 
-                     values = viridis(length(pop.names))[6:9]) + 
-  labs(title = "All Samples Full Genome") +
-  theme_bw()
-
+  set.seed(48)
+  subset200K <- sample(lrLD.ind, size = 200000)
+  set.seed(NULL)
+  #head(sample(lrLD.ind, size = 200000))
+  subset200Korder <- subset200K[order(subset200K)]
+  G_sub <- G_full[,subset200Korder]
+  chrom_sub <- chrom_full[subset200Korder]
+  pos_sub <- pos_full[subset200Korder]
+  
+  random200K <- list(G = G_sub, 
+                     Pos = pos_sub,
+                     Chr = chrom_sub,
+                     Pop.ID = bigSNP$fam$family.ID,
+                     Sample.ID = bigSNP$fam$sample.ID)
+  Gsub_coded <- add_code256(big_copy(random200K$G,
+                                     type = "raw"),
+                            code=bigsnpr:::CODE_012)
+  saveRDS(random200K, paste(folderOut, "random200KthinSNPs.rds"))
+  
+  lrLD_sub <- snp_autoSVD(G=Gsub_coded, infos.chr = random200K$Chr,
+                      infos.pos = random200K$Pos, size = 1)
+  lrLD_sub.tb <- attr(lrLD_sub, "lrldr")
+  rownames(lrLD_sub$u) <- bigSNP$fam$sample.ID
+  par(mar=c(4,4,1,1))
+  plot(lrLD_sub$d, xlab="PC", ylab= "Variation explained", bty="l")
+  
+  df.pcs.sub <- data.frame(lrLD_sub$u, pop = bigSNP$fam$family.ID)
+  colnames(df.pcs.sub) <- c(paste0("PC", 1:10), "pop")
+  pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
+                 "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
+  for(i in 1:length(pop.names)){
+    #df.pcs.full$pop[df.pcs.full$pop == paste0("Pop", i)] <- pop.names[i]
+    #df.pcs.chrom1$pop[df.pcs.chrom1$pop == paste0("Pop", i)] <- pop.names[i]
+    df.pcs.sub$pop[df.pcs.sub$pop == paste0("Pop", i)] <- pop.names[i]
+  }
+  df.pcs.sub$pop <- factor(df.pcs.sub$pop, levels = pop.names)
+  
+  ggplot(df.pcs.sub, aes(x = PC1, y = PC2, color = pop)) + 
+    geom_point(alpha = 0.75) +
+    scale_color_manual(name = "Population", 
+                       values = viridis(length(pop.names))) + 
+    labs(title = "All Samples Full Genome") +
+    theme_bw()
+  
+  
+  G_sub_GOM <- G_full[1:137,subset200Korder]
+  chrom_sub_GOM <- chrom_full[subset200Korder]
+  pos_sub_GOM <- pos_full[subset200Korder]
+  
+  random200K_GOM <- list(G = G_sub_GOM, 
+                     Pos = pos_sub_GOM,
+                     Chr = chrom_sub_GOM,
+                     Pop.ID = bigSNP$fam$family.ID[1:137],
+                     Sample.ID = bigSNP$fam$sample.ID[1:137])
+  GsubGOM_coded <- add_code256(big_copy(random200K_GOM$G,
+                                     type = "raw"),
+                            code=bigsnpr:::CODE_012)
+  saveRDS(random200K_GOM, paste(folderOut, "random200KthinSNPs_GOM.rds"))
+  
+  lrLD_sub_GOM <- snp_autoSVD(G=GsubGOM_coded, infos.chr = random200K_GOM$Chr,
+                          infos.pos = random200K_GOM$Pos, size = 1)
+  
+  df.pcs.sub_GOM <- data.frame(lrLD_sub_GOM$u, pop = random200K_GOM$Pop.ID)
+  colnames(df.pcs.sub_GOM) <- c(paste0("PC", 1:10), "pop")
+  pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
+                 "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
+  for(i in 1:length(pop.names)){
+    df.pcs.sub_GOM$pop[df.pcs.sub_GOM$pop == paste0("Pop", i)] <- pop.names[i]
+  }
+  df.pcs.sub_GOM$pop <- factor(df.pcs.sub_GOM$pop, levels = pop.names)
+  
+  ggplot(df.pcs.sub_GOM, aes(x = PC1, y = PC2, color = pop)) + 
+    geom_point(alpha = 0.75) +
+    scale_color_manual(name = "Population", 
+                       values = viridis(length(pop.names))) + 
+    labs(title = "All Samples Full Genome") +
+    theme_bw()
+  
+  
+  G_sub_ICE <- G_full[138:295,subset200Korder]
+  chrom_sub_ICE <- chrom_full[subset200Korder]
+  pos_sub_ICE <- pos_full[subset200Korder]
+  
+  random200K_ICE <- list(G = G_sub_ICE, 
+                         Pos = pos_sub_ICE,
+                         Chr = chrom_sub_ICE,
+                         Pop.ID = bigSNP$fam$family.ID[138:295],
+                         Sample.ID = bigSNP$fam$sample.ID[138:295])
+  GsubICE_coded <- add_code256(big_copy(random200K_ICE$G,
+                                        type = "raw"),
+                               code=bigsnpr:::CODE_012)
+  saveRDS(random200K_ICE, paste(folderOut, "random200KthinSNPs_ICE.rds"))
+  
+  lrLD_sub_ICE <- snp_autoSVD(G=GsubICE_coded, infos.chr = random200K_ICE$Chr,
+                              infos.pos = random200K_ICE$Pos, size = 1)
+  
+  
+  df.pcs.sub_ICE <- data.frame(lrLD_sub_ICE$u, pop = random200K_ICE$Pop.ID)
+  colnames(df.pcs.sub_ICE) <- c(paste0("PC", 1:10), "pop")
+  pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
+                 "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
+  for(i in 1:length(pop.names)){
+    df.pcs.sub_ICE$pop[df.pcs.sub_ICE$pop == paste0("Pop", i)] <- pop.names[i]
+  }
+  df.pcs.sub_ICE$pop <- factor(df.pcs.sub_ICE$pop, levels = pop.names)
+  
+  ggplot(df.pcs.sub_ICE, aes(x = PC1, y = PC2, color = pop)) + 
+    geom_point(alpha = 0.75) +
+    scale_color_manual(name = "Population", 
+                       values = viridis(length(pop.names))[6:9]) + 
+    labs(title = "All Samples Full Genome") +
+    theme_bw()
+  
 
 #### end subset 200K thinned snps
 ######################################################################################################    
 
 
 ######################################################################################################    
-#### start pcadapt
+#### start outlier detection
+
+## pcadapt
 #[1:nrow(G_coded), 1:ncol(G_coded)]
 #dist <- snp_pcadapt(G_thin, U.row = df.pcs.sub[, 1:10])
 
-# global outliers
-df.global.outliers <- read.pcadapt(t(G_thin))
-global.outliers <- pcadapt(df.outliers, K = 5)
-plot(global.outliers, option = "screeplot")
-plot(global.outliers)
+# global outliers analysis
+  # full dataset run  pcadapt
+    df.global.outliers <- read.pcadapt(t(G_mat))
+    df.global <- as.data.frame(pos_full)
+    colnames(df.global) <- "position"
+    global.outliers <- pcadapt(df.global.outliers, K = 5)
+    df.global$pca_ALL_PC1 <- global.outliers$loadings[,1]
+    df.global$pca_ALL_PC2 <- global.outliers$loadings[,2]
+    plot(global.outliers, option = "screeplot")
+  
+    folderOut <- "./Figures/Outliers/"
+    png(paste0(folderOut, "pcadapt_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+      plot(global.outliers)
+    dev.off()
+  
+  # thinned SNPs run pcadapt
+    df.global.outliers.thin <- read.pcadapt(t(G_thin))
+    global.outliers.thin.pcadapt <- pcadapt(df.global.outliers.thin)
+    df.global$pca_PRUNED_PC1 <- NA 
+    df.global$pca_PRUNED_PC2 <- NA
+    df.global$pca_PRUNED_PC1[lrLD.ind] <- global.outliers.thin.pcadapt$loadings[,1]
+    df.global$pca_PRUNED_PC2[lrLD.ind] <- global.outliers.thin.pcadapt$loadings[,2] 
+    
+    
+  # outlier stats 
+    # all data
+    df.global$pcadapt_ALL_chisq <- as.numeric(global.outliers$chi2.stat)
+    df.global$pcadapt_ALL_log10p <- -log10(global.outliers$pvalues)
+    
+    # thinned SNPs
+    outliers <- snp_gc(snp_pcadapt(G_coded, U.row = lrLD$u[,1]))
+    df.global$pcadapt_PRUNED_log10p <- -predict(outliers,log10=T)
+    df.global$pcadapt_PRUNED_pvalue <- 10^(-df.global$pcadapt_PRUNED_log10p)
+    df.global$qvalue <- qvalue(df.global$pcadapt_PRUNED_pvalue)$qvalues  
+    df.global$pcadapt_outlier <- ifelse(df.global$qvalue > 0.01, FALSE, TRUE)
+    df.global$pcadapt_outlier <- as.factor(df.global$pcadapt_outlier)
+    
+    
+    # plot
+    max_value_log10 <- max(!is.na(df.global$pcadapt_PRUNED_log10p))
+    pcadapt.log10p <- ggplot(df.global, aes(x = position, y = pcadapt_PRUNED_log10p))  +
+    
+      geom_point(data = df.global[!is.na(df.global$pcadapt_outlier),], aes(color = pcadapt_outlier, shape = pcadapt_outlier))+
+      scale_color_manual(values = c("black", "red")) +
+      scale_shape_manual(values = c(19, 1)) +
+      theme_classic() +
+      theme(panel.background = element_blank(), 
+            strip.background = element_rect(colour = "white", fill = "grey92"),
+            text = element_text(size = 11)) +
+      labs(title = "OutFLANK",
+           y = "-log10(p-values)",
+           x = " ") + 
+      scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) + 
+      scale_y_continuous(expand = c(0, 0), limits = c(0, 1))
+    
+    
+    
+#pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
+               #"Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
 
-pop.names <- c("Mass.Winter", "Mass.Red", "Mass.Spring", "Cashes.Olive", "Cashes.Red", 
-               "Ice.SWOff", "Ice.SWNear", "Ice.NEOff", "Ice.NENear")
+# Iceland cod outlier analysis
+  G_mat_ice <- subset(G_mat,  subset = rownames(G_mat) == "Pop6" | rownames(G_mat) == "Pop7" |
+                        rownames(G_mat) == "Pop8" | rownames(G_mat) == "Pop9")
+  G_thin_ice <- subset(G_thin,  subset = rownames(G_thin) == "Pop6" | rownames(G_thin) == "Pop7" |
+                       rownames(G_thin) == "Pop8" | rownames(G_thin) == "Pop9")
+  df.ice.outliers <- read.pcadapt(t(G_thin_ice))
+  ice.outliers <- pcadapt(df.ice.outliers, K = 2)
+  plot(ice.outliers, option = "screeplot")
+  png(paste0(folderOut, "pcadapt_iceOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(ice.outliers)
+  dev.off()
+  
+# outliers GOM offshore/nearshore
+  G_mat_GOM <- subset(G_mat,  subset = rownames(G_mat) == "Pop1" | rownames(G_mat) == "Pop2" |
+                         rownames(G_mat) == "Pop3" | rownames(G_mat) == "Pop4"| rownames(G_mat) == "Pop5")
+  G_thin_GOM <- subset(G_thin,  subset = rownames(G_thin) == "Pop1" | rownames(G_thin) == "Pop2" |
+                       rownames(G_thin) == "Pop3" | rownames(G_thin) == "Pop4"| rownames(G_thin) == "Pop5")
+  df.GOM.outliers <- read.pcadapt(t(G_thin_GOM))
+  GOM.outliers <- pcadapt(df.GOM.outliers, K = 2)
+  plot(GOM.outliers, option = "screeplot")
+  png(paste0(folderOut, "pcadapt_GOMOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(GOM.outliers)
+  dev.off()
+
 # outliers iceland offshore/nearshore
-rownames(G_thin) <- bigSNP$fam$family.ID
-G_thin_ice <- subset(G_thin,  subset = rownames(G_thin) == "Pop6" | rownames(G_thin) == "Pop7" |
-                     rownames(G_thin) == "Pop8" | rownames(G_thin) == "Pop9")
-df.ice.outliers <- read.pcadapt(t(G_thin_ice))
-ice.outliers <- pcadapt(df.ice.outliers, K = 2)
-plot(ice.outliers, option = "screeplot")
-plot(ice.outliers)
-
-G_thin_GOM <- subset(G_thin,  subset = rownames(G_thin) == "Pop1" | rownames(G_thin) == "Pop2" |
-                     rownames(G_thin) == "Pop3" | rownames(G_thin) == "Pop4"| rownames(G_thin) == "Pop5")
-df.GOM.outliers <- pcadapt(df.GOM.outliers)
-plot(GOM.outliers, option = "screeplot")
-
 G_thin_coast_GOM <- subset(G_thin,  subset = rownames(G_thin) == "Pop1" | rownames(G_thin) == "Pop2" |
                        rownames(G_thin) == "Pop3" | rownames(G_thin) == "Pop4"| rownames(G_thin) == "Pop5" | 
                          rownames(G_thin) == "Pop7"|rownames(G_thin) == "Pop9")
 df.GOM.outliers <- pcadapt(df.GOM.outliers)
 plot(GOM.outliers, option = "screeplot")
 
+## outflank
+  # ensure there are no NAs
+  sum(is.na(G_thin)) # checks out; no NAs
 
-
-#### end pcadapt
+# global outliers 
+  FSTs_full <- MakeDiploidFSTMat(G_mat, locusNames = colnames(G_mat), popNames = rownames(G_mat))
+  FSTs <- MakeDiploidFSTMat(G_thin, locusNames = colnames(G_thin), popNames = rownames(G_thin))
+  global_out <- OutFLANK(FSTs, NumberOfSamples=295, qthreshold = 0.05, Hmin = 0.1)
+  str(global_out)
+  png(paste0(folderOut, "outflank_globalOutliers_FstFreq.png"), width = 15, height = 7, units = 'in', res = 300)
+    OutFLANKResultsPlotter(global_out, withOutliers = TRUE,
+                           NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
+                           FALSE, RightZoomFraction = 0.05, titletext = NULL)
+  dev.off()
+  df.global.outliers <- pOutlierFinderChiSqNoCorr(FSTs_full, Fstbar = global_out$FSTNoCorrbar, 
+                            dfInferred = global_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  df.global.outliers.thin <- pOutlierFinderChiSqNoCorr(FSTs, Fstbar = global_out$FSTNoCorrbar, 
+                                                  dfInferred = global_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  global.outliers <- df.global.outliers$OutlierFlag==TRUE
+  global.outliers.thin <- df.global.outliers.thin$OutlierFlag==TRUE
+  png(paste0(folderOut, "outflank_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.global.outliers$LocusName[df.global.outliers$He>0.1], df.global.outliers$FST[df.global.outliers$He>0.1],
+         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Global Outliers")
+    points(df.global.outliers$LocusName[global.outliers], df.global.outliers$FST[global.outliers], col="red", pch=20)  
+  dev.off()
+  
+  png(paste0(folderOut, "outflank_globalOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.global.outliers.thin$LocusName[df.global.outliers.thin$He>0.1], df.global.outliers.thin$FST[df.global.outliers.thin$He>0.1],
+         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Global Outliers")
+    points(df.global.outliers.thin$LocusName[global.outliers.thin], df.global.outliers.thin$FST[global.outliers.thin], col="red", pch=20)  
+  dev.off()
+  
+# outliers iceland offshore/nearshore
+  FSTs_mat_ice <- MakeDiploidFSTMat(G_mat_ice, locusNames = colnames(G_mat_ice), popNames = rownames(G_mat_ice))
+  FSTs_ice <- MakeDiploidFSTMat(G_thin_ice, locusNames = colnames(G_thin_ice), popNames = rownames(G_thin_ice))
+  ice_out <- OutFLANK(FSTs_ice, NumberOfSamples=158, qthreshold = 0.05, Hmin = 0.1)
+  str(ice_out)
+  
+  png(paste0(folderOut, "outflank_iceOutliers_FstFreq.png"), width = 15, height = 7, units = 'in', res = 300)
+    OutFLANKResultsPlotter(ice_out, withOutliers = TRUE,
+                           NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
+                           FALSE, RightZoomFraction = 0.05, titletext = NULL)
+  dev.off()
+  
+  df.ice.outliers <- pOutlierFinderChiSqNoCorr(FSTs_mat_ice, Fstbar = ice_out$FSTNoCorrbar, 
+                                               dfInferred = ice_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  df.ice.outliers.thin <- pOutlierFinderChiSqNoCorr(FSTs_ice, Fstbar = ice_out$FSTNoCorrbar, 
+                                                    dfInferred = ice_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  ice.outliers <- df.ice.outliers$OutlierFlag==TRUE
+  ice.outliers.thin <- df.ice.outliers.thin$OutlierFlag==TRUE
+  png(paste0(folderOut, "outflank_iceOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.ice.outliers$LocusName[df.ice.outliers$He>0.1], df.ice.outliers$FST[df.ice.outliers$He>0.1],
+         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
+    points(df.ice.outliers$LocusName[ice.outliers], df.ice.outliers$FST[ice.outliers], col="red", pch=20)  
+  dev.off()
+  
+  png(paste0(folderOut, "outflank_iceOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.ice.outliers.thin$LocusName[df.ice.outliers.thin$He>0.1], df.ice.outliers.thin$FST[df.ice.outliers.thin$He>0.1],
+        xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
+    points(df.ice.outliers.thin$LocusName[ice.outliers.thin], df.ice.outliers.thin$FST[ice.outliers.thin], col="red", pch=20)  
+  dev.off()
+  
+# outliers GOM offshore/nearshore
+  FSTs_mat_GOM <- MakeDiploidFSTMat(G_mat_GOM, locusNames = colnames(G_mat_GOM), popNames = rownames(G_mat_GOM))
+  FSTs_GOM <- MakeDiploidFSTMat(G_thin_GOM, locusNames = colnames(G_thin_GOM), popNames = rownames(G_thin_GOM))
+  GOM_out <- OutFLANK(FSTs_GOM, NumberOfSamples=137, qthreshold = 0.05, Hmin = 0.1)
+  str(GOM_out)
+  
+  png(paste0(folderOut, "outflank_GOMOutliers_FstFreq.png"), width = 15, height = 7, units = 'in', res = 300)
+    OutFLANKResultsPlotter(GOM_out, withOutliers = TRUE,
+                           NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
+                           FALSE, RightZoomFraction = 0.05, titletext = NULL)
+  dev.off()
+  
+  df.GOM.outliers <- pOutlierFinderChiSqNoCorr(FSTs_mat_GOM, Fstbar = GOM_out$FSTNoCorrbar, 
+                                               dfInferred = GOM_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  df.GOM.outliers.thin <- pOutlierFinderChiSqNoCorr(FSTs_GOM, Fstbar = GOM_out$FSTNoCorrbar, 
+                                                    dfInferred = GOM_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
+  GOM.outliers <- df.GOM.outliers$OutlierFlag==TRUE
+  GOM.outliers.thin <- df.GOM.outliers.thin$OutlierFlag==TRUE
+  png(paste0(folderOut, "outflank_GOMOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.GOM.outliers$LocusName[df.GOM.outliers$He>0.1], df.GOM.outliers$FST[df.GOM.outliers$He>0.1],
+         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Gulf of Maine Outliers")
+    points(df.GOM.outliers$LocusName[GOM.outliers], df.GOM.outliers$FST[GOM.outliers], col="red", pch=20)  
+  dev.off()
+  
+  png(paste0(folderOut, "outflank_GOMOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.GOM.outliers.thin$LocusName[df.GOM.outliers.thin$He>0.1], df.GOM.outliers.thin$FST[df.GOM.outliers.thin$He>0.1],
+        xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Gulf of Maine Outliers")
+    points(df.GOM.outliers.thin$LocusName[GOM.outliers.thin], df.GOM.outliers.thin$FST[GOM.outliers.thin], col="red", pch=20)  
+  dev.off()
+  
+  
+#### end outlier detection
 ######################################################################################################    
 
 ######################################################################################################
