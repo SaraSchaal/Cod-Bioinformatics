@@ -128,13 +128,85 @@ Same description for Iceland except these outliers make more sense for what I wo
 The outliers are confusing. I would have still expected some clusters of outliers in the inverted regions for some of these analysis. I tried pcadapt just on the thinned SNPs and am now updating the code to use the thinned estimation on the full set like I did for outflank.  
 
 ```
-df.global.outliers <- read.pcadapt(t(G_thin))
-global.outliers <- pcadapt(df.global.outliers, K = 5) # 5 chosen based on screeplot made with K = 10
-plot(global.outliers, option = "screeplot")
-plot(global.outliers)
+ df.global.outliers <- read.pcadapt(t(G_mat))
+    df.glob <- as.data.frame(cbind(pos_full, bigSNP$map$chromosome))
+    colnames(df.glob) <- c("position", "chrom")
+    df.glob$position <- as.numeric(df.glob$position)
+
+    chrom.info <- df.glob %>%
+                    group_by(chrom) %>%
+                    summarize(center=(max(position) + min(position)) / 2, final = max(position))
+    
+    df.chrom.info <- as.data.frame(chrom.info)
+    df.chrom.info$chrom_num <- 1:23
+    df.chrom.info$chrom.cumulative <- cumsum(df.chrom.info$final)
+    df.chrom.info$center.cumulative <- df.chrom.info$chrom.cumulative - df.chrom.info$center
+    df.chrom.info$add.value <- c(0, df.chrom.info$chrom.cumulative[1:(nrow(df.chrom.info)-1)])
+    df.global <- left_join(df.glob, df.chrom.info, by = "chrom")
+    
+    df.global$pos.cumulative <- df.global$position + df.global$add.value
+    
+    global.outliers <- pcadapt(df.global.outliers, K = 5)
+    df.global$pca_ALL_PC1 <- global.outliers$loadings[,1]
+    df.global$pca_ALL_PC2 <- global.outliers$loadings[,2]
+    plot(global.outliers, option = "screeplot")
+  
+    folderOut_outliers <- "./Figures/Outliers/"
+    png(paste0(folderOut_outliers, "pcadapt_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+      plot(global.outliers)
+    dev.off()
+
+  # thinned SNPs run pcadapt
+    df.global.outliers.thin <- read.pcadapt(t(G_thin))
+    global.outliers.thin.pcadapt <- pcadapt(df.global.outliers.thin)
+    df.global$pca_PRUNED_PC1 <- NA 
+    df.global$pca_PRUNED_PC2 <- NA
+    df.global$pca_PRUNED_PC1[lrLD.ind] <- global.outliers.thin.pcadapt$loadings[,1]
+    df.global$pca_PRUNED_PC2[lrLD.ind] <- global.outliers.thin.pcadapt$loadings[,2] 
+    
+    
+  # outlier stats 
+    # all data
+    df.global$pcadapt_ALL_chisq <- as.numeric(global.outliers$chi2.stat)
+    df.global$pcadapt_ALL_log10p <- -log10(global.outliers$pvalues)
+    
+    # thinned SNPs
+    outliers <- snp_gc(snp_pcadapt(G_coded, U.row = lrLD$u[,1]))
+    df.global$pcadapt_PRUNED_log10p <- -predict(outliers,log10=T)
+    df.global$pcadapt_PRUNED_pvalue <- 10^(-df.global$pcadapt_PRUNED_log10p)
+    df.global$qvalue <- qvalue(df.global$pcadapt_PRUNED_pvalue)$qvalues  
+    df.global$pcadapt_outlier <- ifelse(df.global$qvalue > 0.01, FALSE, TRUE)
+    df.global$pcadapt_outlier <- as.factor(df.global$pcadapt_outlier)
+    
+    
+    # plot
+    max_value_log10 <- max(df.global$pcadapt_ALL_log10p[!is.na(df.global$pcadapt_PRUNED_log10p)])
+    df.global$chrom_num <- as.factor(df.global$chrom_num)
+    row.indexes <- sample(1:nrow(df.global), size = 10000)
+    df.prac <- df.global[row.indexes,]
+    
+    pcadapt.log10p <- ggplot(df.global, aes(x = pos.cumulative, y = pcadapt_PRUNED_log10p)) +
+      geom_point(data = df.global[!is.na(df.global$pcadapt_outlier),], 
+                 aes(color = chrom_num, shape = pcadapt_outlier, alpha = pcadapt_outlier)) +
+      scale_color_manual(values = c(rep(c("navy", "lightblue"), 11), "navy")) +
+      scale_shape_manual(values = c(1, 20)) +
+      scale_alpha_manual(values = c(0.05,0.7)) +
+      geom_hline(yintercept = 4.2, linetype = "dashed") +
+      theme_classic() +
+      theme(panel.background = element_blank(), 
+            strip.background = element_rect(colour = "white", fill = "grey92"),
+            text = element_text(size = 11)) +
+      labs(title = "pcadapt",
+           y = "-log10(p-values)",
+           x = "position")  +
+      scale_x_continuous(expand = c(0,0), label = df.chrom.info$chrom_num, breaks = df.chrom.info$center.cumulative) +
+      scale_y_continuous(expand = c(0, 0))
+    png(paste0(folderOut_outliers, "pcadapt_globalOutliersThinned.png"), width = 18, height = 10, units = 'in', res = 300) 
+      pcadapt.log10p + theme(legend.position = "none")
+    dev.off()
 ```
 #### Global Outliers 
-<img src="../Figures/Outliers/pcadapt_globalOutliers.png" width="500">  
+<img src="../Figures/Outliers/pcadapt_globalOutliersThinned.png" width="500">  
 
 #### Icelandic Cod Outliers
 <img src="../Figures/Outliers/pcadapt_iceOutliers.png" width="500">  
