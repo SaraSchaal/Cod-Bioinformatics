@@ -125,10 +125,10 @@ Same description for Iceland except these outliers make more sense for what I wo
 
 ## Pcadapt
 
-The outliers are confusing. I would have still expected some clusters of outliers in the inverted regions for some of these analysis. I tried pcadapt just on the thinned SNPs and am now updating the code to use the thinned estimation on the full set like I did for outflank.  
-
+### Code for global outliers
+First, we need to convert the position data to be cumulative. The position shifts back to 1 with every chromosome instead of being cumulative across the genome. Then we can calculate outliers and plot a manhattan plot. 
 ```
- df.global.outliers <- read.pcadapt(t(G_mat))
+ 	df.global.outliers <- read.pcadapt(t(G_mat))
     df.glob <- as.data.frame(cbind(pos_full, bigSNP$map$chromosome))
     colnames(df.glob) <- c("position", "chrom")
     df.glob$position <- as.numeric(df.glob$position)
@@ -209,8 +209,8 @@ The outliers are confusing. I would have still expected some clusters of outlier
 <img src="../Figures/Outliers/pcadapt_globalOutliersThinned.png" width="500">  
 
 #### Icelandic Cod Outliers
-<img src="../Figures/Outliers/pcadapt_iceOutliers.png" width="500">  
+ 
 
 #### GOM Outliers
-<img src="../Figures/Outliers/pcadapt_GOMOutliers.png" width="500">  
+
 
