@@ -254,6 +254,8 @@ First, we need to convert the position data to be cumulative. The position shift
 #### Global Outliers 
 <img src="../Figures/Outliers/pcadapt_globalOutliersThinned.png" width="500">  
 
+<img src="../Figures/Outliers/pcadapt_globalOutliers.png" width="500">  
+
 #### Icelandic Cod Outliers
 These population specific analyses aren't working. The global outliers looks how I would expect and I've got the code written to make nice manhattan plots once I get this working, but I can't figure out what is happening with these analyses.
 
