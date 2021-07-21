@@ -85,12 +85,11 @@ The inputs that I used in this analysis were first the full G matrix on all \~2,
 
 ```
  I first calculated outliers on the full set using the estimated mean FST and df from the thinned SNP set. This is the first plot below labeled "Icelandic cod outliers - full set" . This was just exploratory to see what the outlier analysis did without thinning. The second analysis is the thinned snps which should be the figure we want to focus on for publication. However neither are making sense at the moment. 
- 
+
 ```
   
   FSTs_mat_ice <- MakeDiploidFSTMat(G_mat_ice, locusNames = colnames(G_mat_ice), popNames = rownames(G_mat_ice))
-  FSTs_ice <- MakeDiploidFSTMat(G_thin_ice, locusNames = colnames(G_thin_ice), popNames = rownames(G_thin_ice))
-  ice_out <- OutFLANK(FSTs_ice, NumberOfSamples=158, qthreshold = 0.05, Hmin = 0.1)
+  ice_out <- OutFLANK(FSTs_mat_ice[lrLD.ice.ind,], NumberOfSamples=158, qthreshold = 0.05, Hmin = 0.1)
   str(ice_out)
   
   png(paste0(folderOut_outliers, "outflank_iceOutliers_FstFreq.png"), width = 15, height = 7, units = 'in', res = 300)
@@ -110,20 +109,13 @@ The inputs that I used in this analysis were first the full G matrix on all \~2,
   df.ice.outliers.outflank$position <- as.numeric(df.ice.outliers.outflank$position)
   df.plot.ice.outflank <- right_join(df.global, df.ice.outliers.outflank, by = "position")
   df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p <- -log10(df.plot.ice.outflank$pvaluesRightTail)
-  df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add <- -log10(df.plot.global.outflank$pvaluesRightTail + 1/10000000000000000000)
   
-  max.ice.outflank <- max(df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add[!is.na(df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add)])
   png(paste0(folderOut_outliers, "outflank_iceOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
     plot(df.plot.ice.outflank$pos.cumulative, df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add,
          xlab="Position", ylab="-log10(p-values)", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
     points(df.plot.ice.outflank$pos.cumulative[ice.outliers], df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add[ice.outliers], col="red", pch=20)  
   dev.off()
   
-  png(paste0(folderOut_outliers, "outflank_iceOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
-    plot(df.ice.outliers.thin$LocusName, df.ice.outliers.thin$FST,
-        xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
-    points(df.ice.outliers.thin$LocusName[ice.outliers.thin], df.ice.outliers.thin$FST[ice.outliers.thin], col="red", pch=20)  
-  dev.off()
 ```
 #### Fst Frequency Distribution
 <img src="../Figures/Outliers/outflank_iceOutliers_FstFreq.png" width="500">  
@@ -263,9 +255,74 @@ First, we need to convert the position data to be cumulative. The position shift
 <img src="../Figures/Outliers/pcadapt_globalOutliersThinned.png" width="500">  
 
 #### Icelandic Cod Outliers
- These population specific analyses aren't working. The global outliers looks how I would expect and I've got the code written to make nice manhattan plots once I get this working, but I can't figure out what is happening with these analyses.
+These population specific analyses aren't working. The global outliers looks how I would expect and I've got the code written to make nice manhattan plots once I get this working, but I can't figure out what is happening with these analyses.
 
- When I 
+When I get to the call outliers steps I get an error.
+
+```
+# Iceland cod outlier analysis
+  G_mat_ice <- subset(G_mat,  subset = rownames(G_mat) == "Pop6" | rownames(G_mat) == "Pop7" |
+                        rownames(G_mat) == "Pop8" | rownames(G_mat) == "Pop9")
+  G_ice_coded <- add_code256(big_copy(G_mat_ice,
+                                      type = "raw"),
+                             code=bigsnpr:::CODE_012)
+  
+  lrLD.ice <- snp_autoSVD(G=G_ice_coded, infos.chr = chrom_full,
+                      infos.pos = pos_full, size = 1)
+  
+  str(lrLD.ice)
+  lrLD.ice.ind <- attr(lrLD.ice, "subset") # this contains new set of pruned SNPs
+  length(lrLD.ice.ind) 
+  length(G_mat_ice[lrLD.ice.ind])
+  G_thin_ice <- G_mat_ice[,lrLD.ice.ind]
+  colnames(G_thin_ice) <- bigSNP$map$physical.pos[lrLD.ice.ind]
+  rownames(G_thin_ice) <- rownames(G_mat_ice)
+  lrLD.ice.tb <- attr(lrLD.ice, "lrldr")
+  sum(is.na(G_mat_ice[1:nrow(G_mat_ice),1:ncol(G_mat_ice)]))
+  
+  df.ice.out <- read.pcadapt(t(G_mat_ice))
+  
+  ## information to get correct positions
+  df.ice.outliers <- left_join(df.glob, df.chrom.info, by = "chrom")
+  df.ice.outliers$pos.cumulative <- df.ice.outliers$position + df.ice.outliers$add.value
+  
+  #  run pcadapt on full g matrix
+  ice.outliers <- pcadapt(df.ice.out, K = 2)
+  plot(ice.outliers, option = "screeplot")
+  
+  df.ice.outliers$pca_ALL_PC1 <- ice.outliers$loadings[,1]
+  df.ice.outliers$pca_ALL_PC2 <- ice.outliers$loadings[,2]
+  
+  # run pcadapt on thinned SNPs run pcadapt
+  df.ice.out.thin <- read.pcadapt(t(G_thin_ice))
+  ice.outliers.thin.pcadapt <- pcadapt(df.ice.out.thin, K = 2)
+  df.ice.outliers$pca_PRUNED_PC1 <- NA 
+  df.ice.outliers$pca_PRUNED_PC2 <- NA
+  df.ice.outliers$pca_PRUNED_PC1[lrLD.ice.ind] <- ice.outliers.thin.pcadapt$loadings[,1]
+  df.ice.outliers$pca_PRUNED_PC2[lrLD.ice.ind] <- ice.outliers.thin.pcadapt$loadings[,2] 
+  
+  # outlier stats 
+  # all data
+  df.ice.outliers$pcadapt_ALL_chisq <- as.numeric(ice.outliers$chi2.stat)
+  df.ice.outliers$pcadapt_ALL_log10p <- -log10(ice.outliers$pvalues)
+  
+  # thinned SNPs
+  rownames(lrLD$u) <- bigSNP$fam$family.ID
+  lrLD.ice <- subset(lrLD$u,  subset = rownames(lrLD$u) == "Pop6" | rownames(lrLD$u) == "Pop7" |
+           rownames(lrLD$u) == "Pop8" | rownames(lrLD$u) == "Pop9")
+  rownames(lrLD.ice) <- NULL
+ 
+  ice.outliers <- snp_gc(snp_pcadapt(G_ice_coded, U.row = lrLD.ice[,1]))
+    Error in doTryCatch(return(expr), name, parentenv, handler) : 
+      invalid 'xmin' value
+    In addition: Warning messages:
+    1: In min(x) : no non-missing arguments to min; returning Inf
+    2: In max(x) : no non-missing arguments to max; returning -Inf
+
+  sum(is.na(lrLD.ice$u[,1])) # checked that there aren't NAs
+
+
+```
 
 #### GOM Outliers
 
