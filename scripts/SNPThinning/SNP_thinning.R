@@ -15,6 +15,9 @@
     library( packages_needed[i], character.only = TRUE)
   }
   
+  if(!("OutFLANK" %in% installed.packages())){remotes::install_github("whitlock/OutFLANK")}
+  library(OutFLANK)
+  
   ## Plink download
   plink2 <- download_plink2(AVX2 = FALSE)
 
@@ -39,11 +42,11 @@
   ## pull out genotypes into a matrix and chromosomes into a vector
   G_full <- bigSNP$genotypes
   pos_full <- bigSNP$map$physical.pos
-  G_full[1:100]
+  G_full[1:10, 1:10]
   n <- nrow(G_full)
   m <- ncol(G_full)
   table(G_full[1:m])
-  sum(is.na(G_full[1:m])) # should have no NAs 
+  sum(is.na(G_full[1:n,1:m])) # should have no NAs 
 
   # Store just G matrix
   G_mat <- G_full[1:n, 1:m]
@@ -78,7 +81,7 @@
   lrLD.tb <- attr(lrLD, "lrldr")
   sample(lrLD.ind)
 
-  #df.pcs.full$pop <- factor(df.pcs.full$pop, levels = pop.names)
+  
 
 ######################################################################################################
 #### subset SNPs to 200K ####
@@ -249,6 +252,8 @@
     png(paste0(folderOut_outliers, "pcadapt_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
       plot(global.outliers)
     dev.off()
+    
+   plot(global.outliers$stat~df.global$pos.cumulative)
 
   # thinned SNPs run pcadapt
     df.global.outliers.thin <- read.pcadapt(t(G_thin))
@@ -305,11 +310,22 @@
 # Iceland cod outlier analysis
   G_mat_ice <- subset(G_mat,  subset = rownames(G_mat) == "Pop6" | rownames(G_mat) == "Pop7" |
                         rownames(G_mat) == "Pop8" | rownames(G_mat) == "Pop9")
-  G_thin_ice <- subset(G_thin,  subset = rownames(G_thin) == "Pop6" | rownames(G_thin) == "Pop7" |
-                       rownames(G_thin) == "Pop8" | rownames(G_thin) == "Pop9")
   G_ice_coded <- add_code256(big_copy(G_mat_ice,
                                       type = "raw"),
                              code=bigsnpr:::CODE_012)
+  
+  lrLD.ice <- snp_autoSVD(G=G_ice_coded, infos.chr = chrom_full,
+                      infos.pos = pos_full, size = 1)
+  
+  str(lrLD.ice)
+  lrLD.ice.ind <- attr(lrLD.ice, "subset") # this contains new set of pruned SNPs
+  length(lrLD.ice.ind) 
+  length(G_mat_ice[lrLD.ice.ind])
+  G_thin_ice <- G_mat_ice[,lrLD.ice.ind]
+  colnames(G_thin_ice) <- bigSNP$map$physical.pos[lrLD.ice.ind]
+  rownames(G_thin_ice) <- rownames(G_mat_ice)
+  lrLD.ice.tb <- attr(lrLD.ice, "lrldr")
+  sum(is.na(G_mat_ice[1:nrow(G_mat_ice),1:ncol(G_mat_ice)]))
   
   df.ice.out <- read.pcadapt(t(G_mat_ice))
   
@@ -323,12 +339,12 @@
   df.ice.outliers$pca_ALL_PC2 <- ice.outliers$loadings[,2]
   
   # thinned SNPs run pcadapt
-  df.ice.out.thin <- read.pcadapt(t(G_thin))
+  df.ice.out.thin <- read.pcadapt(t(G_thin_ice))
   ice.outliers.thin.pcadapt <- pcadapt(df.ice.out.thin, K = 2)
   df.ice.outliers$pca_PRUNED_PC1 <- NA 
   df.ice.outliers$pca_PRUNED_PC2 <- NA
-  df.ice.outliers$pca_PRUNED_PC1[lrLD.ind] <- ice.outliers.thin.pcadapt$loadings[,1]
-  df.ice.outliers$pca_PRUNED_PC2[lrLD.ind] <- ice.outliers.thin.pcadapt$loadings[,2] 
+  df.ice.outliers$pca_PRUNED_PC1[lrLD.ice.ind] <- ice.outliers.thin.pcadapt$loadings[,1]
+  df.ice.outliers$pca_PRUNED_PC2[lrLD.ice.ind] <- ice.outliers.thin.pcadapt$loadings[,2] 
   
   # outlier stats 
   # all data
@@ -340,8 +356,10 @@
   lrLD.ice <- subset(lrLD$u,  subset = rownames(lrLD$u) == "Pop6" | rownames(lrLD$u) == "Pop7" |
            rownames(lrLD$u) == "Pop8" | rownames(lrLD$u) == "Pop9")
   rownames(lrLD.ice) <- NULL
-  ice.outliers <- snp_gc(snp_pcadapt(G_ice_coded, U.row = lrLD.ice[,1]))
-  
+  ice.outliers <- snp_gc(snp_pcadapt(G_ice_coded, U.row = lrLD.ice$u[,1]))
+  sum(is.na(lrLD.ice$u[,1]))
+  sum(is.na(G_ice_coded[1:nrow(G_ice_coded), 1:ncol(G_ice_coded)]))
+  #outliers <- snp_gc(snp_pcadapt(G_coded, U.row = lrLD$u[,1]))
   
   df.global$pcadapt_PRUNED_log10p <- -predict(outliers,log10=T)
   df.global$pcadapt_PRUNED_pvalue <- 10^(-df.global$pcadapt_PRUNED_log10p)
@@ -375,6 +393,8 @@ G_thin_coast_GOM <- subset(G_thin,  subset = rownames(G_thin) == "Pop1" | rownam
 df.GOM.outliers <- pcadapt(df.GOM.outliers)
 plot(GOM.outliers, option = "screeplot")
 
+
+
 ## outflank
   # ensure there are no NAs
   sum(is.na(G_thin)) # checks out; no NAs
@@ -389,16 +409,27 @@ plot(GOM.outliers, option = "screeplot")
                            NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
                            FALSE, RightZoomFraction = 0.05, titletext = NULL)
   dev.off()
-  df.global.outliers <- pOutlierFinderChiSqNoCorr(FSTs_full, Fstbar = global_out$FSTNoCorrbar, 
+ 
+  df.global.outliers.outflank <- pOutlierFinderChiSqNoCorr(FSTs_full, Fstbar = global_out$FSTNoCorrbar, 
                             dfInferred = global_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
-  df.global.outliers.thin <- pOutlierFinderChiSqNoCorr(FSTs, Fstbar = global_out$FSTNoCorrbar, 
+  df.global.outliers.thin.outflank <- pOutlierFinderChiSqNoCorr(FSTs, Fstbar = global_out$FSTNoCorrbar, 
                                                   dfInferred = global_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
-  global.outliers <- df.global.outliers$OutlierFlag==TRUE
-  global.outliers.thin <- df.global.outliers.thin$OutlierFlag==TRUE
-  png(paste0(folderOut, "outflank_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
-    plot(df.global.outliers$LocusName[df.global.outliers$He>0.1], df.global.outliers$FST[df.global.outliers$He>0.1],
-         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Global Outliers")
-    points(df.global.outliers$LocusName[global.outliers], df.global.outliers$FST[global.outliers], col="red", pch=20)  
+  
+  global.outliers.outflank <- df.global.outliers.outflank$OutlierFlag==TRUE
+  global.outliers.thin.outflank <- df.global.outliers.thin.outflank$OutlierFlag==TRUE
+  colnames(df.global.outliers.outflank)[1] <- "position"
+  df.global.outliers.outflank$position <- as.numeric(df.global.outliers.outflank$position)
+  df.plot.global.outflank <- left_join(df.global, df.global.outliers.outflank, by = "position")
+  df.plot.global.outflank$OutFLANK_0.2_PRUNED_log10p <- -log10(df.plot.global.outflank$pvaluesRightTail)
+  df.plot.global.outflank$OutFLANK_0.2_PRUNED_log10p_add <- -log10(df.plot.global.outflank$pvaluesRightTail + 1/10000000000000000000)
+  
+  max.global.outflank <- max(df.plot.global.outflank$OutFLANK_0.2_PRUNED_log10p_add[!is.na(df.plot.global.outflank$OutFLANK_0.2_PRUNED_log10p_add)])
+  png(paste0(folderOut_outliers, "outflank_globalOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.plot.global.outflank$pos.cumulative, 
+         df.plot.global.outflank$OutFLANK_0.2_PRUNED_log10p_add, ylim = c(0,max.global.outflank),
+         xlab="Position", ylab="-log10(p-values)", col=rgb(0,0,0,0.2), main = "Global Outliers")
+    points(df.plot.global.outflank$pos.cumulative[global.outliers.outflank], 
+           df.plot.global.outflank$OutFLANK_0.2_PRUNED_log10p_add[global.outliers.outflank], col="red", pch=20)  
   dev.off()
   
   png(paste0(folderOut, "outflank_globalOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
@@ -413,26 +444,34 @@ plot(GOM.outliers, option = "screeplot")
   ice_out <- OutFLANK(FSTs_ice, NumberOfSamples=158, qthreshold = 0.05, Hmin = 0.1)
   str(ice_out)
   
-  png(paste0(folderOut, "outflank_iceOutliers_FstFreq.png"), width = 15, height = 7, units = 'in', res = 300)
+  png(paste0(folderOut_outliers, "outflank_iceOutliers_FstFreq.png"), width = 15, height = 7, units = 'in', res = 300)
     OutFLANKResultsPlotter(ice_out, withOutliers = TRUE,
                            NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
                            FALSE, RightZoomFraction = 0.05, titletext = NULL)
   dev.off()
   
-  df.ice.outliers <- pOutlierFinderChiSqNoCorr(FSTs_mat_ice, Fstbar = ice_out$FSTNoCorrbar, 
+  df.ice.outliers.outflank <- pOutlierFinderChiSqNoCorr(FSTs_mat_ice, Fstbar = ice_out$FSTNoCorrbar, 
                                                dfInferred = ice_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
-  df.ice.outliers.thin <- pOutlierFinderChiSqNoCorr(FSTs_ice, Fstbar = ice_out$FSTNoCorrbar, 
+  df.ice.outliers.outflank.thin <- pOutlierFinderChiSqNoCorr(FSTs_ice, Fstbar = ice_out$FSTNoCorrbar, 
                                                     dfInferred = ice_out$dfInferred, qthreshold = 0.05, Hmin=0.1)
-  ice.outliers <- df.ice.outliers$OutlierFlag==TRUE
-  ice.outliers.thin <- df.ice.outliers.thin$OutlierFlag==TRUE
-  png(paste0(folderOut, "outflank_iceOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
-    plot(df.ice.outliers$LocusName[df.ice.outliers$He>0.1], df.ice.outliers$FST[df.ice.outliers$He>0.1],
-         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
-    points(df.ice.outliers$LocusName[ice.outliers], df.ice.outliers$FST[ice.outliers], col="red", pch=20)  
+  ice.outliers <- df.ice.outliers.outflank$OutlierFlag==TRUE
+  ice.outliers.thin <- df.ice.outliers.outflank.thin$OutlierFlag==TRUE
+  
+  colnames(df.ice.outliers.outflank)[1] <- "position"
+  df.ice.outliers.outflank$position <- as.numeric(df.ice.outliers.outflank$position)
+  df.plot.ice.outflank <- right_join(df.global, df.ice.outliers.outflank, by = "position")
+  df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p <- -log10(df.plot.ice.outflank$pvaluesRightTail)
+  df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add <- -log10(df.plot.global.outflank$pvaluesRightTail + 1/10000000000000000000)
+  
+  max.ice.outflank <- max(df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add[!is.na(df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add)])
+  png(paste0(folderOut_outliers, "outflank_iceOutliers.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.plot.ice.outflank$pos.cumulative, df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add,
+         xlab="Position", ylab="-log10(p-values)", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
+    points(df.plot.ice.outflank$pos.cumulative[ice.outliers], df.plot.ice.outflank$OutFLANK_0.2_PRUNED_log10p_add[ice.outliers], col="red", pch=20)  
   dev.off()
   
-  png(paste0(folderOut, "outflank_iceOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
-    plot(df.ice.outliers.thin$LocusName[df.ice.outliers.thin$He>0.1], df.ice.outliers.thin$FST[df.ice.outliers.thin$He>0.1],
+  png(paste0(folderOut_outliers, "outflank_iceOutliersThin.png"), width = 15, height = 7, units = 'in', res = 300)
+    plot(df.ice.outliers.thin$LocusName, df.ice.outliers.thin$FST,
         xlab="Position", ylab="FST", col=rgb(0,0,0,0.2), main = "Icelandic cod outliers")
     points(df.ice.outliers.thin$LocusName[ice.outliers.thin], df.ice.outliers.thin$FST[ice.outliers.thin], col="red", pch=20)  
   dev.off()
